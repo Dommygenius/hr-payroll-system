@@ -2,19 +2,18 @@
 import logging
 import re
 
-import requests
 from django.conf import settings
 
-logger = logging.getLogger(__name__)
+from apps.ai_features.gemini_client import GeminiClient
 
-GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
-GEMINI_MODELS = ('gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-001')
+logger = logging.getLogger(__name__)
 
 HR_SYSTEM_PROMPT = (
     'You are HRMS Pro Assistant, a friendly HR and payroll expert for employees and managers. '
     'Give clear, practical answers in plain language. Use short paragraphs or numbered steps when helpful. '
-    'Cover leave, payslips, attendance, payroll, recruitment, performance, policies, and using the HRMS. '
-    'If company-specific data is unknown, say so and suggest contacting HR.'
+    'Cover leave, payslips, attendance, payroll, recruitment, performance, policies, and using the HRMS system. '
+    'When the user asks follow-up questions like "yes" or "help me more", use the conversation history for context. '
+    'If company-specific data is provided below, use it. Otherwise say you do not have that detail and suggest contacting HR.'
 )
 
 
@@ -146,123 +145,95 @@ class HRChatbotService:
     @classmethod
     def respond(cls, message: str, history: list | None = None, user=None) -> dict:
         history = history or []
-        gemini_text = cls._gemini_reply(message, history)
-        if gemini_text:
-            return {'text': gemini_text, 'source': 'gemini'}
+        context = cls._user_context(user)
+        system_prompt = cls._build_system_prompt(context)
 
+        client = GeminiClient()
+        gemini = client.generate(message, history=history, system_prompt=system_prompt)
+        if gemini.get('ok'):
+            return {
+                'text': gemini['text'],
+                'source': 'gemini',
+                'model': gemini.get('model', ''),
+            }
+
+        fallback = cls._smart_reply(message, history, user, context)
         return {
-            'text': cls._smart_reply(message, history, user),
+            'text': fallback,
             'source': 'assistant',
+            'gemini_error': gemini.get('error'),
         }
 
     @classmethod
     def ai_status(cls) -> dict:
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
-        if not api_key:
-            return {'mode': 'assistant', 'label': 'Smart Assistant', 'online': False}
+        client = GeminiClient()
+        if not client.configured:
+            return {
+                'mode': 'assistant',
+                'label': 'Smart Assistant',
+                'online': False,
+                'note': 'Add GEMINI_API_KEY in .env to enable Gemini AI',
+            }
 
-        ok = cls._probe_gemini()
-        if ok:
-            return {'mode': 'gemini', 'label': 'Gemini AI', 'online': True}
+        result = client.generate('Reply OK', max_tokens=8)
+        if result.get('ok'):
+            model = result.get('model', getattr(settings, 'GEMINI_MODEL', ''))
+            return {
+                'mode': 'gemini',
+                'label': 'Gemini AI',
+                'online': True,
+                'model': model,
+            }
+
+        error = result.get('error', 'Unavailable')
         return {
             'mode': 'assistant',
             'label': 'Smart Assistant',
             'online': False,
-            'note': 'Gemini quota unavailable — using built-in HR assistant',
+            'note': f'Gemini unavailable ({error[:80]}) — using built-in HR assistant',
         }
 
     @classmethod
-    def _probe_gemini(cls) -> bool:
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
-        if not api_key:
-            return False
-        model = getattr(settings, 'GEMINI_MODEL', GEMINI_MODELS[0])
-        url = GEMINI_API_URL.format(model=model)
-        try:
-            response = requests.post(
-                url,
-                params={'key': api_key},
-                json={'contents': [{'parts': [{'text': 'ping'}]}]},
-                timeout=8,
+    def _build_system_prompt(cls, context: dict) -> str:
+        lines = [HR_SYSTEM_PROMPT]
+        if not context:
+            return lines[0]
+
+        lines.append('\n\nEmployee context (use when relevant):')
+        if context.get('employee_name'):
+            lines.append(f"- Name: {context['employee_name']}")
+        if context.get('department'):
+            lines.append(f"- Department: {context['department']}")
+        if context.get('company_name'):
+            lines.append(f"- Company: {context['company_name']}")
+
+        balances = context.get('leave_balances') or []
+        if balances:
+            bal_text = ', '.join(f"{b['type']}: {b['days']} days" for b in balances[:5])
+            lines.append(f'- Leave balances: {bal_text}')
+
+        pending = context.get('pending_leave')
+        if pending:
+            lines.append(f'- Pending leave requests: {pending}')
+
+        recent = context.get('recent_attendance')
+        if recent:
+            lines.append(
+                f"- Last 7 days attendance: {recent['present']} present, {recent['late']} late"
             )
-            return response.status_code == 200
-        except requests.RequestException:
-            return False
+
+        lines.append(
+            '\nHRMS navigation: Leave Management, Payroll > Payslips, Attendance > Clock In, '
+            'Performance > Work Tasks, Settings > Users & Roles.'
+        )
+        return '\n'.join(lines)
 
     @classmethod
-    def _gemini_reply(cls, message: str, history: list) -> str | None:
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
-        if not api_key:
-            return None
-
-        contents = cls._build_gemini_contents(message, history)
-        payload = {
-            'systemInstruction': {'parts': [{'text': HR_SYSTEM_PROMPT}]},
-            'contents': contents,
-            'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 1024},
-        }
-
-        for model in cls._model_candidates():
-            url = GEMINI_API_URL.format(model=model)
-            try:
-                response = requests.post(
-                    url,
-                    params={'key': api_key},
-                    json=payload,
-                    timeout=30,
-                )
-                if response.status_code == 429:
-                    continue
-                response.raise_for_status()
-                data = response.json()
-                text = cls._extract_gemini_text(data)
-                if text:
-                    return text
-            except requests.RequestException as exc:
-                logger.warning('Gemini model %s failed: %s', model, exc)
-        return None
-
-    @classmethod
-    def _model_candidates(cls) -> tuple[str, ...]:
-        preferred = getattr(settings, 'GEMINI_MODEL', '')
-        models = []
-        if preferred:
-            models.append(preferred)
-        for model in GEMINI_MODELS:
-            if model not in models:
-                models.append(model)
-        return tuple(models)
-
-    @staticmethod
-    def _build_gemini_contents(message: str, history: list) -> list:
-        contents = []
-        for item in history[-10:]:
-            role = item.get('role', 'user')
-            if role == 'assistant':
-                role = 'model'
-            if role not in ('user', 'model'):
-                continue
-            contents.append({
-                'role': role,
-                'parts': [{'text': item.get('content', '')}],
-            })
-        contents.append({'role': 'user', 'parts': [{'text': message}]})
-        return contents
-
-    @staticmethod
-    def _extract_gemini_text(data: dict) -> str | None:
-        candidates = data.get('candidates') or []
-        if not candidates:
-            return None
-        parts = candidates[0].get('content', {}).get('parts') or []
-        text = ''.join(part.get('text', '') for part in parts).strip()
-        return text or None
-
-    @classmethod
-    def _smart_reply(cls, message: str, history: list, user) -> str:
+    def _smart_reply(cls, message: str, history: list, user, context: dict | None = None) -> str:
+        if context is None:
+            context = cls._user_context(user)
         text = message.strip().lower()
         last_assistant = cls._last_assistant_text(history)
-        context = cls._user_context(user)
         intent = cls._detect_intent(text, last_assistant)
 
         if intent == 'greeting':
@@ -459,6 +430,8 @@ class HRChatbotService:
         context = {
             'first_name': getattr(user, 'first_name', None) or user.get_username().split('@')[0],
         }
+        if getattr(user, 'company', None):
+            context['company_name'] = user.company.name
 
         try:
             from apps.employees.models import Employee

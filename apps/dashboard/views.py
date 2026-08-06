@@ -425,7 +425,7 @@ def ai_view(request):
         if action == 'chat':
             message = request.POST.get('message', '').strip()
             if message:
-                conv, _ = ChatbotConversation.objects.get_or_create(user=request.user)
+                conv, _ = ChatbotConversation.objects.get_or_create(user=request.user, is_active=True)
                 prior = [
                     {'role': m.role, 'content': m.content}
                     for m in conv.messages.order_by('created_at')
@@ -435,6 +435,19 @@ def ai_view(request):
                 reply = result['text']
                 ChatbotMessage.objects.create(conversation=conv, role='assistant', content=reply)
                 chat_response = reply
+
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'reply': reply,
+                        'source': result.get('source', 'assistant'),
+                        'model': result.get('model', ''),
+                    })
+
+        if action == 'clear_chat':
+            ChatbotConversation.objects.filter(user=request.user).update(is_active=False)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'ok': True})
+            return redirect('module-ai')
 
     jobs_qs = AIAnalysisJob.objects.all()
     if company:

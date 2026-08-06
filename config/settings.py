@@ -274,7 +274,7 @@ HRMS_USE_SUBDOMAIN_TENANTS = env.bool('HRMS_USE_SUBDOMAIN_TENANTS', default=Fals
 # AI
 OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
 GEMINI_API_KEY = env('GEMINI_API_KEY', default='')
-GEMINI_MODEL = env('GEMINI_MODEL', default='gemini-2.0-flash')
+GEMINI_MODEL = env('GEMINI_MODEL', default='gemini-3.5-flash')
 
 # Integrations
 SMS_GATEWAY_URL = env('SMS_GATEWAY_URL', default='')

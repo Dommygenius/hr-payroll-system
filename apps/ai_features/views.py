@@ -87,18 +87,21 @@ class ChatbotPostMessageView(APIView):
             content=message,
         )
 
-        response_text = HRChatbotService.respond(message, history=prior, user=request.user)['text']
+        response_text = HRChatbotService.respond(message, history=prior, user=request.user)
 
         assistant_message = ChatbotMessage.objects.create(
             conversation=conversation,
             role='assistant',
-            content=response_text,
+            content=response_text['text'],
         )
 
         return Response({
             'conversation_id': str(conversation.id),
             'session_id': str(conversation.session_id),
             'user_message': message,
+            'response': response_text['text'],
+            'source': response_text.get('source', 'assistant'),
+            'model': response_text.get('model', ''),
             'assistant_message': ChatbotMessageSerializer(assistant_message).data,
         })
 

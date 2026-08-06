@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load tenant_tags %}
 
 {% block title %}AI Assistant - {{ app_name }}{% endblock %}
 
@@ -6,14 +7,14 @@
 <div class="page-hero">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% tenant_url 'dashboard' %}">Dashboard</a></li>
             <li class="breadcrumb-item active">AI Assistant</li>
         </ol>
     </nav>
     <div class="page-header">
         <div>
             <h1 class="page-title"><span class="page-title-icon"><i class="bi bi-stars"></i></span>AI Assistant</h1>
-            <p class="page-subtitle">Smart HR chatbot, resume screening, and predictive analytics</p>
+            <p class="page-subtitle">Powered by Google Gemini — ask anything about HR</p>
         </div>
     </div>
 </div>
@@ -26,12 +27,17 @@
                     <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-chat-dots-fill"></i></span>
                     <div>
                         <h5 class="mb-0">HR Chatbot</h5>
-                        <small class="text-muted">Ask about leave, payslips, attendance & more</small>
+                        <small class="text-muted" id="aiStatusText">
+                            {% if ai_status.online %}Gemini connected{% if ai_status.model %} · {{ ai_status.model }}{% endif %}{% else %}Built-in assistant{% endif %}
+                        </small>
                     </div>
                 </div>
-                <span class="badge {% if ai_status.online %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}">
-                    <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>{{ ai_status.label }}
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-ghost" id="clearChatBtn" title="Clear chat"><i class="bi bi-trash"></i></button>
+                    <span class="badge {% if ai_status.online %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}" id="aiStatusBadge">
+                        <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>{{ ai_status.label }}
+                    </span>
+                </div>
             </div>
             <div class="ai-chat-body" id="chatMessages">
                 {% for msg in chat_history %}
@@ -40,28 +46,32 @@
                     <div class="chat-content">{{ msg.content|linebreaksbr }}</div>
                 </div>
                 {% empty %}
-                <div class="empty-state py-5">
+                <div class="empty-state py-5" id="chatEmpty">
                     <div class="empty-state-icon"><i class="bi bi-stars"></i></div>
                     <h6>How can I help you today?</h6>
-                    <p>Try: "How do I apply for leave?" or "Where are my payslips?"</p>
+                    <p>Ask naturally — Gemini understands follow-up questions and context.</p>
                 </div>
                 {% endfor %}
+                <div class="chat-bubble chat-assistant d-none" id="typingIndicator">
+                    <small class="chat-role">AI Assistant</small>
+                    <div class="chat-content"><span class="typing-dots">Thinking</span></div>
+                </div>
             </div>
             <div class="card-footer bg-transparent border-top p-3">
                 {% if ai_status.note %}
-                <div class="small text-muted mb-2"><i class="bi bi-info-circle me-1"></i>{{ ai_status.note }}</div>
+                <div class="small text-muted mb-2" id="aiStatusNote"><i class="bi bi-info-circle me-1"></i>{{ ai_status.note }}</div>
                 {% endif %}
-                <form method="post" class="d-flex gap-2 flex-wrap">
+                <form method="post" class="d-flex gap-2 flex-wrap" id="chatForm" data-turbo="false">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="chat">
-                    <input type="text" name="message" class="form-control" placeholder="Ask anything about HR..." required autofocus>
-                    <button type="submit" class="btn btn-primary px-3"><i class="bi bi-send-fill"></i></button>
+                    <input type="text" name="message" id="chatInput" class="form-control" placeholder="Ask anything about HR..." required autocomplete="off">
+                    <button type="submit" class="btn btn-primary px-3" id="chatSendBtn"><i class="bi bi-send-fill"></i></button>
                 </form>
                 <div class="d-flex flex-wrap gap-2 mt-2">
                     <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="How do I apply for annual leave?">Apply for leave</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="Where is my payslip?">My payslip</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="How do I clock in?">Clock in</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="help">Help</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="What can you help me with?">Help</button>
                 </div>
             </div>
         </div>
@@ -71,8 +81,12 @@
             <div class="card-header"><h5 class="card-title">AI Capabilities</h5></div>
             <div class="card-body p-0">
                 <div class="list-item-modern">
+                    <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-chat-dots-fill"></i></span>
+                    <div class="list-item-content"><strong>HR Chatbot</strong><small>Gemini-powered Q&amp;A</small></div>
+                </div>
+                <div class="list-item-modern">
                     <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-file-earmark-person-fill"></i></span>
-                    <div class="list-item-content"><strong>Resume Screening</strong><small>Score & rank candidates</small></div>
+                    <div class="list-item-content"><strong>Resume Screening</strong><small>Score &amp; rank candidates</small></div>
                 </div>
                 <div class="list-item-modern">
                     <span class="ai-feature-icon bg-warning-subtle"><i class="bi bi-exclamation-triangle-fill"></i></span>
@@ -81,10 +95,6 @@
                 <div class="list-item-modern">
                     <span class="ai-feature-icon bg-danger-subtle"><i class="bi bi-graph-down-arrow"></i></span>
                     <div class="list-item-content"><strong>Attrition Prediction</strong><small>Identify flight risks</small></div>
-                </div>
-                <div class="list-item-modern">
-                    <span class="ai-feature-icon bg-info-subtle"><i class="bi bi-clock-history"></i></span>
-                    <div class="list-item-content"><strong>Attendance Patterns</strong><small>Spot anomalies early</small></div>
                 </div>
             </div>
         </div>
@@ -112,16 +122,88 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const chat = document.getElementById('chatMessages');
-    if (chat) chat.scrollTop = chat.scrollHeight;
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('chatInput');
+    const typing = document.getElementById('typingIndicator');
+    const sendBtn = document.getElementById('chatSendBtn');
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+    function scrollChat() {
+        if (chat) chat.scrollTop = chat.scrollHeight;
+    }
+    scrollChat();
+
+    function appendBubble(role, text, meta) {
+        document.getElementById('chatEmpty')?.remove();
+        const wrap = document.createElement('div');
+        wrap.className = 'chat-bubble chat-' + role;
+        const label = role === 'user' ? 'You' : ('AI Assistant' + (meta ? ' · ' + meta : ''));
+        wrap.innerHTML = '<small class="chat-role">' + label + '</small><div class="chat-content">' +
+            text.replace(/\n/g, '<br>') + '</div>';
+        chat.insertBefore(wrap, typing);
+        scrollChat();
+    }
 
     document.querySelectorAll('.ai-suggest').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            const input = document.querySelector('input[name="message"]');
-            if (input) {
-                input.value = btn.dataset.msg || '';
-                input.focus();
-            }
+            if (input) { input.value = btn.dataset.msg || ''; input.focus(); }
         });
+    });
+
+    form?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const message = input?.value.trim();
+        if (!message) return;
+
+        appendBubble('user', message);
+        input.value = '';
+        input.disabled = true;
+        sendBtn.disabled = true;
+        typing.classList.remove('d-none');
+        scrollChat();
+
+        try {
+            const body = new FormData(form);
+            body.set('message', message);
+            const res = await fetch(window.location.pathname, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: body,
+            });
+            const data = await res.json();
+            const meta = data.source === 'gemini' ? (data.model || 'Gemini') : 'Assistant';
+            appendBubble('assistant', data.reply || 'No response.', meta);
+
+            if (data.source === 'gemini') {
+                document.getElementById('aiStatusBadge')?.classList.replace('bg-secondary-subtle', 'bg-success-subtle');
+                document.getElementById('aiStatusBadge')?.classList.replace('text-secondary', 'text-success');
+                const note = document.getElementById('aiStatusNote');
+                if (note) note.remove();
+            }
+        } catch (err) {
+            appendBubble('assistant', 'Sorry, something went wrong. Please try again.', 'Error');
+        } finally {
+            typing.classList.add('d-none');
+            input.disabled = false;
+            sendBtn.disabled = false;
+            input.focus();
+        }
+    });
+
+    document.getElementById('clearChatBtn')?.addEventListener('click', async function() {
+        if (!confirm('Clear chat history?')) return;
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', csrf);
+        body.append('action', 'clear_chat');
+        await fetch(window.location.pathname, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: body,
+        });
+        chat.querySelectorAll('.chat-bubble:not(#typingIndicator)').forEach(el => el.remove());
+        chat.insertAdjacentHTML('afterbegin',
+            '<div class="empty-state py-5" id="chatEmpty"><div class="empty-state-icon"><i class="bi bi-stars"></i></div><h6>How can I help you today?</h6><p>Ask naturally — Gemini understands follow-up questions.</p></div>'
+        );
     });
 });
 </script>
