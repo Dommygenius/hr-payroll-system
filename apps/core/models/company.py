@@ -35,6 +35,14 @@ class Company(AuditableModel):
     def __str__(self):
         return self.name
 
+    def get_portal_path(self, path: str = '/dashboard/') -> str:
+        from apps.core.tenant import get_portal_path
+        return get_portal_path(self.slug, path)
+
+    def get_portal_url(self, path: str = '/dashboard/', request=None) -> str:
+        from apps.core.tenant import get_portal_url
+        return get_portal_url(self.slug, path, request)
+
 
 class Branch(AuditableModel):
     """Company branch/location."""

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Portal Ready — {{ company.name }}{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page">
+    <div class="auth-panel-brand">
+        <div class="auth-panel-brand-content">
+            <div class="sidebar-brand-icon d-inline-flex mb-4"><i class="bi bi-check-circle-fill"></i></div>
+            <h1>You're all set!</h1>
+            <p><strong>{{ company.name }}</strong> is live on HRMS Pro.</p>
+        </div>
+    </div>
+    <div class="auth-panel-form">
+        <div class="auth-card" style="max-width:520px;">
+            <h2>Your tenant portal link</h2>
+            <p class="auth-subtitle">Bookmark and share this URL with your team</p>
+            <div class="alert alert-success">
+                <div class="small text-uppercase fw-semibold mb-1">Private portal URL</div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <code id="portalUrl" class="flex-grow-1">{{ portal_url }}</code>
+                    <button type="button" class="btn btn-sm btn-outline-success" id="copyPortalBtn">Copy</button>
+                </div>
+            </div>
+            <p class="small text-muted">Login page for your team:</p>
+            <p><code>{{ login_url }}</code></p>
+            <a href="{{ portal_url }}" class="btn btn-primary w-100">Go to my dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('copyPortalBtn')?.addEventListener('click', function() {
+    const text = document.getElementById('portalUrl')?.textContent || '';
+    navigator.clipboard.writeText(text);
+    this.textContent = 'Copied!';
+    setTimeout(() => { this.textContent = 'Copy'; }, 2000);
+});
+</script>
+{% endblock %}

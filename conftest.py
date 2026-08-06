@@ -7,7 +7,7 @@ User = get_user_model()
 @pytest.fixture
 def company(db):
     from apps.core.models import Company
-    return Company.objects.create(name='Test Corp', slug='test-corp')
+    return Company.objects.create(name='Test Corp', slug='acme-corp')
 
 
 @pytest.fixture

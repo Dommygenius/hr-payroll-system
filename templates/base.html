@@ -29,8 +29,9 @@
 </head>
 
 <body>
+    {% load tenant_tags %}
 
-    {% if user.is_authenticated %}
+    {% if user.is_authenticated and not auth_layout %}
 
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
@@ -44,7 +45,7 @@
 
                 <div class="sidebar-brand-text">
 
-                    <span class="sidebar-brand-name">{{ app_name }}</span>
+                    <span class="sidebar-brand-name">{% if tenant %}{{ tenant.name }}{% else %}{{ app_name }}{% endif %}</span>
 
                     <span class="sidebar-brand-tag">Enterprise HR</span>
 
@@ -56,45 +57,45 @@
 
                 <ul class="sidebar-nav" id="sidebarNav">
 
-                    <li><a href="{% url 'dashboard' %}" data-path="/" data-path-alt="/dashboard/"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a></li>
+                    <li><a href="{% tenant_url 'dashboard' %}" data-path="/" data-path-alt="/dashboard/"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a></li>
 
                     <li class="nav-section">Core HR</li>
 
-                    <li><a href="{% url 'module' 'employees' %}" data-path="/module/employees"><i class="bi bi-people-fill"></i> Employees</a></li>
+                    <li><a href="{% tenant_url 'module' 'employees' %}" data-path="/module/employees"><i class="bi bi-people-fill"></i> Employees</a></li>
 
-                    <li><a href="{% url 'module' 'recruitment' %}" data-path="/module/recruitment"><i class="bi bi-person-plus-fill"></i> Recruitment</a></li>
+                    <li><a href="{% tenant_url 'module' 'recruitment' %}" data-path="/module/recruitment"><i class="bi bi-person-plus-fill"></i> Recruitment</a></li>
 
-                    <li><a href="{% url 'module' 'leave' %}" data-path="/module/leave"><i class="bi bi-calendar2-check-fill"></i> Leave</a></li>
+                    <li><a href="{% tenant_url 'module' 'leave' %}" data-path="/module/leave"><i class="bi bi-calendar2-check-fill"></i> Leave</a></li>
 
-                    <li><a href="{% url 'module' 'attendance' %}" data-path="/module/attendance"><i class="bi bi-clock-fill"></i> Attendance</a></li>
+                    <li><a href="{% tenant_url 'module' 'attendance' %}" data-path="/module/attendance"><i class="bi bi-clock-fill"></i> Attendance</a></li>
 
-                    <li><a href="{% url 'clock-in' %}" data-path="/attendance/clock-in"><i class="bi bi-geo-alt-fill"></i> Clock In</a></li>
+                    <li><a href="{% tenant_url 'clock-in' %}" data-path="/attendance/clock-in"><i class="bi bi-geo-alt-fill"></i> Clock In</a></li>
 
                     <li class="nav-section">Finance</li>
 
-                    <li><a href="{% url 'module' 'payroll' %}" data-path="/module/payroll"><i class="bi bi-wallet2"></i> Payroll</a></li>
+                    <li><a href="{% tenant_url 'module' 'payroll' %}" data-path="/module/payroll"><i class="bi bi-wallet2"></i> Payroll</a></li>
 
-                    <li><a href="{% url 'module' 'casuals' %}" data-path="/module/casuals"><i class="bi bi-person-workspace"></i> Casuals</a></li>
+                    <li><a href="{% tenant_url 'module' 'casuals' %}" data-path="/module/casuals"><i class="bi bi-person-workspace"></i> Casuals</a></li>
 
                     <li class="nav-section">Development</li>
 
-                    <li><a href="{% url 'module' 'performance' %}" data-path="/module/performance"><i class="bi bi-graph-up"></i> Performance</a></li>
+                    <li><a href="{% tenant_url 'module' 'performance' %}" data-path="/module/performance"><i class="bi bi-graph-up"></i> Performance</a></li>
 
-                    <li><a href="{% url 'module' 'surveys' %}" data-path="/module/surveys"><i class="bi bi-chat-square-heart-fill"></i> Surveys</a></li>
+                    <li><a href="{% tenant_url 'module' 'surveys' %}" data-path="/module/surveys"><i class="bi bi-chat-square-heart-fill"></i> Surveys</a></li>
 
                     <li class="nav-section">Relations</li>
 
-                    <li><a href="{% url 'module' 'relations' %}" data-path="/module/relations"><i class="bi bi-heart-fill"></i> Relations</a></li>
+                    <li><a href="{% tenant_url 'module' 'relations' %}" data-path="/module/relations"><i class="bi bi-heart-fill"></i> Relations</a></li>
 
-                    <li><a href="{% url 'module' 'disciplinary' %}" data-path="/module/disciplinary"><i class="bi bi-shield-fill-exclamation"></i> Disciplinary</a></li>
+                    <li><a href="{% tenant_url 'module' 'disciplinary' %}" data-path="/module/disciplinary"><i class="bi bi-shield-fill-exclamation"></i> Disciplinary</a></li>
 
                     <li class="nav-section">Analytics</li>
 
-                    <li><a href="{% url 'module-reports' %}" data-path="/module/reports"><i class="bi bi-pie-chart-fill"></i> Reports</a></li>
+                    <li><a href="{% tenant_url 'module-reports' %}" data-path="/module/reports"><i class="bi bi-pie-chart-fill"></i> Reports</a></li>
 
-                    <li><a href="{% url 'module-ai' %}" data-path="/module/ai"><i class="bi bi-stars"></i> AI Assistant</a></li>
+                    <li><a href="{% tenant_url 'module-ai' %}" data-path="/module/ai"><i class="bi bi-stars"></i> AI Assistant</a></li>
 
-                    <li><a href="{% url 'module' 'settings' %}" data-path="/module/settings"><i class="bi bi-sliders"></i> Settings</a></li>
+                    <li><a href="{% tenant_url 'module' 'settings' %}" data-path="/module/settings"><i class="bi bi-sliders"></i> Settings</a></li>
 
                 </ul>
 
@@ -202,15 +203,15 @@
 
                         <ul class="dropdown-menu dropdown-menu-end">
 
-                            <li><a class="dropdown-item" href="{% url 'accounts-profile' %}"><i class="bi bi-person me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="{% tenant_url 'accounts-profile' %}"><i class="bi bi-person me-2"></i>Profile</a></li>
 
-                            <li><a class="dropdown-item" href="{% url 'module' 'settings' %}"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                            <li><a class="dropdown-item" href="{% tenant_url 'module' 'settings' %}"><i class="bi bi-gear me-2"></i>Settings</a></li>
 
                             <li><hr class="dropdown-divider"></li>
 
                             <li>
 
-                                <form method="post" action="{% url 'logout' %}" class="m-0" data-turbo="false">
+                                <form method="post" action="{% tenant_url 'logout' %}" class="m-0" data-turbo="false">
 
                                     {% csrf_token %}
 

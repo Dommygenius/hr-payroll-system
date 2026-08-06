@@ -1,25 +1,30 @@
 {% extends 'base.html' %}
+{% load tenant_tags %}
 
-{% block title %}Sign In - {{ app_name }}{% endblock %}
+{% block title %}Sign In{% if tenant %} — {{ tenant.name }}{% endif %}{% endblock %}
 
 {% block auth_content %}
 <div class="auth-page">
     <div class="auth-panel-brand">
         <div class="auth-panel-brand-content">
             <div class="sidebar-brand-icon d-inline-flex mb-4"><i class="bi bi-building"></i></div>
-            <h1>People operations,<br>built for scale.</h1>
-            <p>Unified HR platform for workforce management, payroll processing, and talent acquisition — trusted by modern enterprises.</p>
+            <h1>{% if tenant %}{{ tenant.name }}{% else %}People operations,<br>built for scale.{% endif %}</h1>
+            <p>{% if tenant %}Sign in to your organization's HR portal.{% else %}Unified HR platform for workforce management, payroll, and talent acquisition.{% endif %}</p>
+            {% if tenant %}
+            <div class="auth-features">
+                <div class="auth-feature"><i class="bi bi-link-45deg"></i> Portal: <code>/t/{{ tenant.slug }}/</code></div>
+            </div>
+            {% else %}
             <div class="auth-features">
                 <div class="auth-feature"><i class="bi bi-shield-check"></i> Enterprise-grade security & audit trails</div>
-                <div class="auth-feature"><i class="bi bi-diagram-3"></i> End-to-end employee lifecycle</div>
-                <div class="auth-feature"><i class="bi bi-graph-up-arrow"></i> Real-time analytics & AI insights</div>
             </div>
+            {% endif %}
         </div>
     </div>
     <div class="auth-panel-form">
         <div class="auth-card">
             <h2>Sign in</h2>
-            <p class="auth-subtitle">Enter your credentials to access the dashboard</p>
+            <p class="auth-subtitle">{% if tenant %}Access {{ tenant.name }} dashboard{% else %}Enter your credentials{% endif %}</p>
             <form method="post">
                 {% csrf_token %}
                 {% if form.errors %}
@@ -27,7 +32,7 @@
                 {% endif %}
                 <div class="mb-3">
                     <label class="form-label fw-semibold small text-uppercase" style="letter-spacing:0.04em;font-size:0.6875rem;">Email</label>
-                    <input type="text" name="username" class="form-control" placeholder="admin@acme.com" required autofocus>
+                    <input type="text" name="username" class="form-control" placeholder="you@company.com" required autofocus>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold small text-uppercase" style="letter-spacing:0.04em;font-size:0.6875rem;">Password</label>
@@ -35,9 +40,14 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Continue to Dashboard</button>
             </form>
+            {% if tenant %}
+            <div class="auth-demo-hint small">This portal belongs to <strong>{{ tenant.name }}</strong> only.</div>
+            {% else %}
             <div class="auth-demo-hint">
-                Demo account: <code>admin@acme.com</code> / <code>Admin@123456</code>
+                Demo: <code>admin@acme.com</code> / <code>Admin@123456</code> at <a href="/t/acme-corp/accounts/login/">/t/acme-corp/</a>
             </div>
+            <p class="small text-center mt-3 mb-0"><a href="{% url 'tenant-register' %}">Register a new organization</a></p>
+            {% endif %}
         </div>
     </div>
 </div>

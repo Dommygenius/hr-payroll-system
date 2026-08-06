@@ -73,6 +73,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.middleware.TenantMiddleware',
     'django_otp.middleware.OTPMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'apps.accounts.middleware.AuditLogMiddleware',
@@ -266,6 +267,9 @@ if not DEBUG:
 # HRMS specific
 HRMS_DEFAULT_CURRENCY = 'USD'
 HRMS_SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'KES', 'NGN', 'ZAR', 'INR', 'AED']
+HRMS_PUBLIC_BASE_URL = env('HRMS_PUBLIC_BASE_URL', default='')
+HRMS_TENANT_DOMAIN = env('HRMS_TENANT_DOMAIN', default='')
+HRMS_USE_SUBDOMAIN_TENANTS = env.bool('HRMS_USE_SUBDOMAIN_TENANTS', default=False)
 
 # AI
 OPENAI_API_KEY = env('OPENAI_API_KEY', default='')

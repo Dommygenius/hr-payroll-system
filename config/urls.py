@@ -5,8 +5,12 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from apps.accounts.saas_views import saas_landing_view, tenant_register_view
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('register/', tenant_register_view, name='tenant-register'),
+    path('', saas_landing_view, name='saas-landing'),
     path('', include('apps.dashboard.urls')),
     path('accounts/', include('apps.accounts.urls')),
     path('api/v1/', include('config.api_urls')),
