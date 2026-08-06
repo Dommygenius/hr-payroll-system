@@ -87,7 +87,7 @@ class ChatbotPostMessageView(APIView):
             content=message,
         )
 
-        response_text = HRChatbotService.respond(message, history=prior)
+        response_text = HRChatbotService.respond(message, history=prior, user=request.user)['text']
 
         assistant_message = ChatbotMessage.objects.create(
             conversation=conversation,

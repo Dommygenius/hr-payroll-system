@@ -21,18 +21,23 @@
 <div class="row g-4">
     <div class="col-lg-7">
         <div class="dashboard-card ai-chat-card">
-            <div class="card-header d-flex align-items-center gap-2">
-                <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-chat-dots-fill"></i></span>
-                <div>
-                    <h5 class="mb-0">HR Chatbot</h5>
-                    <small class="text-muted">Ask about leave, payslips, attendance & more</small>
+            <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-chat-dots-fill"></i></span>
+                    <div>
+                        <h5 class="mb-0">HR Chatbot</h5>
+                        <small class="text-muted">Ask about leave, payslips, attendance & more</small>
+                    </div>
                 </div>
+                <span class="badge {% if ai_status.online %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                    <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>{{ ai_status.label }}
+                </span>
             </div>
             <div class="ai-chat-body" id="chatMessages">
                 {% for msg in chat_history %}
                 <div class="chat-bubble chat-{{ msg.role }}">
                     <small class="chat-role">{% if msg.role == 'user' %}You{% else %}AI Assistant{% endif %}</small>
-                    <div>{{ msg.content }}</div>
+                    <div class="chat-content">{{ msg.content|linebreaksbr }}</div>
                 </div>
                 {% empty %}
                 <div class="empty-state py-5">
@@ -43,12 +48,21 @@
                 {% endfor %}
             </div>
             <div class="card-footer bg-transparent border-top p-3">
-                <form method="post" class="d-flex gap-2">
+                {% if ai_status.note %}
+                <div class="small text-muted mb-2"><i class="bi bi-info-circle me-1"></i>{{ ai_status.note }}</div>
+                {% endif %}
+                <form method="post" class="d-flex gap-2 flex-wrap">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="chat">
-                    <input type="text" name="message" class="form-control" placeholder="Ask anything about HR..." required>
+                    <input type="text" name="message" class="form-control" placeholder="Ask anything about HR..." required autofocus>
                     <button type="submit" class="btn btn-primary px-3"><i class="bi bi-send-fill"></i></button>
                 </form>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="How do I apply for annual leave?">Apply for leave</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="Where is my payslip?">My payslip</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="How do I clock in?">Clock in</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="help">Help</button>
+                </div>
             </div>
         </div>
     </div>
@@ -99,6 +113,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     const chat = document.getElementById('chatMessages');
     if (chat) chat.scrollTop = chat.scrollHeight;
+
+    document.querySelectorAll('.ai-suggest').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const input = document.querySelector('input[name="message"]');
+            if (input) {
+                input.value = btn.dataset.msg || '';
+                input.focus();
+            }
+        });
+    });
 });
 </script>
 {% endblock %}

@@ -431,7 +431,8 @@ def ai_view(request):
                     for m in conv.messages.order_by('created_at')
                 ]
                 ChatbotMessage.objects.create(conversation=conv, role='user', content=message)
-                reply = HRChatbotService.respond(message, history=prior)
+                result = HRChatbotService.respond(message, history=prior, user=request.user)
+                reply = result['text']
                 ChatbotMessage.objects.create(conversation=conv, role='assistant', content=reply)
                 chat_response = reply
 
@@ -444,10 +445,13 @@ def ai_view(request):
     if conv:
         chat_history = list(conv.messages.order_by('-created_at')[:20])[::-1]
 
+    ai_status = HRChatbotService.ai_status()
+
     return render(request, 'modules/ai.html', {
         'module': 'ai',
         'title': 'AI Assistant',
         'chat_history': chat_history,
         'chat_response': chat_response,
         'ai_jobs': jobs_qs.order_by('-created_at')[:10],
+        'ai_status': ai_status,
     })
