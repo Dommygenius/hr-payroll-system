@@ -458,13 +458,10 @@ def ai_view(request):
     if conv:
         chat_history = list(conv.messages.order_by('-created_at')[:20])[::-1]
 
-    ai_status = HRChatbotService.ai_status()
-
     return render(request, 'modules/ai.html', {
         'module': 'ai',
         'title': 'AI Assistant',
         'chat_history': chat_history,
         'chat_response': chat_response,
         'ai_jobs': jobs_qs.order_by('-created_at')[:10],
-        'ai_status': ai_status,
     })
