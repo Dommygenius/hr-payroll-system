@@ -16,7 +16,7 @@ $hookContent = @"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$hookPath" -PushOnly
 "@
 
-Set-Content -Path $target -Value $hookContent -Encoding utf8NoBOM
+Set-Content -Path $target -Value $hookContent -Encoding UTF8
 
 Write-Host "Installed post-commit hook -> $target"
 Write-Host "Every git commit will auto-push to origin."
