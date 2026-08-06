@@ -2,17 +2,21 @@
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $hooksDir = Join-Path $repoRoot ".git\hooks"
-$source = Join-Path $repoRoot "scripts\hooks\post-commit.ps1"
+$autoPush = Join-Path $repoRoot "scripts\auto_push.ps1"
 $target = Join-Path $hooksDir "post-commit"
 
 if (-not (Test-Path (Join-Path $repoRoot ".git"))) {
     Write-Error "Run git init first."
 }
 
-@(
-    "@echo off",
-    "powershell -NoProfile -ExecutionPolicy Bypass -File `"$source`""
-) | Set-Content -Path $target -Encoding ASCII
+# Git for Windows runs hooks via sh — use a shell script that invokes PowerShell.
+$hookPath = $autoPush -replace '\\', '/'
+$hookContent = @"
+#!/bin/sh
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$hookPath" -PushOnly
+"@
+
+Set-Content -Path $target -Value $hookContent -Encoding utf8NoBOM
 
 Write-Host "Installed post-commit hook -> $target"
 Write-Host "Every git commit will auto-push to origin."
