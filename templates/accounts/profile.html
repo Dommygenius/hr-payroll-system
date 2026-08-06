@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Profile</li>
+        </ol>
+    </nav>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title"><span class="page-title-icon"><i class="bi bi-person"></i></span>My Profile</h1>
+            <p class="page-subtitle">Your account details and role</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'password_change' %}" class="btn btn-ghost btn-sm"><i class="bi bi-key"></i> Change Password</a>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="form-card">
+            <div class="form-card-header"><h5>Account Information</h5></div>
+            <div class="form-card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Full Name</label>
+                        <p class="mb-0 fw-semibold">{{ profile_user.get_full_name|default:"—" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <p class="mb-0 fw-semibold">{{ profile_user.email }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Username</label>
+                        <p class="mb-0 fw-semibold">{{ profile_user.username|default:"—" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Role</label>
+                        <p class="mb-0"><span class="status-badge status-default">{{ profile_user.role|default:"employee"|cut:"_" }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Company</label>
+                        <p class="mb-0 fw-semibold">{{ profile_user.company|default:"—" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Last Login</label>
+                        <p class="mb-0 fw-semibold">{{ profile_user.last_login|date:"M d, Y H:i"|default:"—" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

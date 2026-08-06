@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports & Analytics - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Reports & Analytics</li>
+        </ol>
+    </nav>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title"><span class="page-title-icon"><i class="bi bi-pie-chart-fill"></i></span>Reports & Analytics</h1>
+            <p class="page-subtitle">Workforce insights, trends, and exportable reports</p>
+        </div>
+        <div class="page-actions d-flex gap-2">
+            <a href="/api/docs/" class="btn btn-ghost btn-sm" target="_blank"><i class="bi bi-download"></i> API Export</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    {% for s in stats %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="stat-card stat-primary">
+            <div class="stat-info">
+                <span class="stat-value">{{ s.value }}</span>
+                <span class="stat-label">{{ s.label }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="dashboard-card workforce-chart-card mb-4">
+    <div class="card-header">
+        <div>
+            <h5 class="card-title mb-0">Workforce by Department</h5>
+            <small class="text-muted">Ranked headcount with share of total workforce</small>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="workforce-chart-summary" id="reportDeptSummary"></div>
+        <div class="workforce-chart-layout mb-4">
+            <div class="workforce-donut-wrap">
+                <canvas id="deptReportDonut"></canvas>
+            </div>
+            <div class="workforce-dept-legend" id="reportDeptLegend"></div>
+        </div>
+        <div class="workforce-bar-chart-wrap" id="deptBarWrap" style="--dept-count: {{ dept_data|length|default:4 }};">
+            <canvas id="deptReportChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <div>
+                    <h5 class="card-title mb-0">Leave by Status</h5>
+                    <small class="text-muted">Request pipeline breakdown</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-donut-wrap">
+                    <canvas id="leaveReportChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="dashboard-card h-100">
+            <div class="card-header"><h5 class="card-title">Quick Reports</h5></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6 col-6"><a href="{% url 'module-tab' module='employees' tab='list' %}" class="report-link-card"><i class="bi bi-people-fill"></i><span>Employees</span></a></div>
+                    <div class="col-md-6 col-6"><a href="{% url 'module-tab' module='payroll' tab='payslips' %}" class="report-link-card"><i class="bi bi-cash-stack"></i><span>Payroll</span></a></div>
+                    <div class="col-md-6 col-6"><a href="{% url 'module-tab' module='leave' tab='requests' %}" class="report-link-card"><i class="bi bi-calendar-check"></i><span>Leave</span></a></div>
+                    <div class="col-md-6 col-6"><a href="{% url 'module-tab' module='attendance' tab='records' %}" class="report-link-card"><i class="bi bi-clock-history"></i><span>Attendance</span></a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="/static/js/hrms-charts.js?v=2" defer></script>
+<script defer>
+window.initPageCharts = function() {
+    if (typeof HRMSCharts === 'undefined') return;
+    const deptData = {{ dept_data_json|safe }};
+    HRMSCharts.renderWorkforceByDepartment({
+        canvasId: 'deptReportDonut',
+        legendId: 'reportDeptLegend',
+        summaryId: 'reportDeptSummary',
+        data: deptData,
+    });
+    HRMSCharts.renderDeptBarChart('deptReportChart', deptData);
+    HRMSCharts.renderLeaveDonut('leaveReportChart', {{ leave_data_json|safe }});
+};
+</script>
+{% endblock %}

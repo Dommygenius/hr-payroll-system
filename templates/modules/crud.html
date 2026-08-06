@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load dashboard_extras %}
+
+{% block title %}{{ title }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">{{ title }}</li>
+        </ol>
+    </nav>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title"><span class="page-title-icon"><i class="bi {{ mod.icon }}"></i></span>{{ title }}</h1>
+            <p class="page-subtitle">{{ tab_cfg.label }} — search, filter, and manage records</p>
+        </div>
+        <div class="page-actions d-flex gap-2">
+            <a href="{% url 'module-tab' module=module tab=active_tab %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+            <a href="{% url 'module-create' module=module tab=active_tab %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Add New
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if stats %}
+<div class="row g-3 mb-4">
+    {% for s in stats %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="stat-card stat-{{ s.color }}">
+            <div class="stat-info">
+                <span class="stat-value">{{ s.value }}</span>
+                <span class="stat-label">{{ s.label }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if tabs|length > 1 %}
+<div class="module-tabs-wrap mt-2">
+    <ul class="nav module-tabs">
+        {% for t in tabs %}
+        <li class="nav-item">
+            <a class="nav-link {% if t.key == active_tab %}active{% endif %}"
+               href="{% url 'module-tab' module=module tab=t.key %}">{{ t.label }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="data-table-card">
+    <div class="data-table-toolbar">
+        <h5>{{ tab_cfg.label }} <span class="record-count">{{ rows|length }}{% if total_count > page_size %} of {{ total_count }}{% endif %} records</span></h5>
+        <form method="get" class="module-search-form">
+            <input type="search" name="q" placeholder="Search records..." value="{{ search }}">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table module-table mb-0">
+            <thead>
+                <tr>
+                    {% for col in columns %}
+                    <th>{{ col.1 }}</th>
+                    {% endfor %}
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    {% for cell in row.cells %}
+                    <td>
+                        {% with idx=forloop.counter0 %}
+                        {% for c in columns %}
+                        {% if forloop.counter0 == idx %}
+                        {% if c.0|is_status_column %}{{ cell|status_badge|safe }}{% else %}{{ cell }}{% endif %}
+                        {% endif %}
+                        {% endfor %}
+                        {% endwith %}
+                    </td>
+                    {% endfor %}
+                    <td>
+                        <div class="table-actions">
+                            <a href="{% url 'module-edit' module=module tab=active_tab pk=row.id %}" class="btn-icon" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{% url 'module-delete' module=module tab=active_tab pk=row.id %}" class="d-inline" onsubmit="return confirm('Delete this record permanently?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-icon btn-icon-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ columns|length|add:1 }}">
+                        <div class="empty-state">
+                            <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
+                            <h6>No records yet</h6>
+                            <p>Get started by adding your first entry.</p>
+                            <a href="{% url 'module-create' module=module tab=active_tab %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-lg"></i> Add {{ tab_cfg.label|slice:":-1" }}
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

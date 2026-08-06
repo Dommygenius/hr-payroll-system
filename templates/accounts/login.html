@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In - {{ app_name }}{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page">
+    <div class="auth-panel-brand">
+        <div class="auth-panel-brand-content">
+            <div class="sidebar-brand-icon d-inline-flex mb-4"><i class="bi bi-building"></i></div>
+            <h1>People operations,<br>built for scale.</h1>
+            <p>Unified HR platform for workforce management, payroll processing, and talent acquisition — trusted by modern enterprises.</p>
+            <div class="auth-features">
+                <div class="auth-feature"><i class="bi bi-shield-check"></i> Enterprise-grade security & audit trails</div>
+                <div class="auth-feature"><i class="bi bi-diagram-3"></i> End-to-end employee lifecycle</div>
+                <div class="auth-feature"><i class="bi bi-graph-up-arrow"></i> Real-time analytics & AI insights</div>
+            </div>
+        </div>
+    </div>
+    <div class="auth-panel-form">
+        <div class="auth-card">
+            <h2>Sign in</h2>
+            <p class="auth-subtitle">Enter your credentials to access the dashboard</p>
+            <form method="post">
+                {% csrf_token %}
+                {% if form.errors %}
+                <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-circle me-2"></i>Invalid credentials. Please try again.</div>
+                {% endif %}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small text-uppercase" style="letter-spacing:0.04em;font-size:0.6875rem;">Email</label>
+                    <input type="text" name="username" class="form-control" placeholder="admin@acme.com" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small text-uppercase" style="letter-spacing:0.04em;font-size:0.6875rem;">Password</label>
+                    <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Continue to Dashboard</button>
+            </form>
+            <div class="auth-demo-hint">
+                Demo account: <code>admin@acme.com</code> / <code>Admin@123456</code>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

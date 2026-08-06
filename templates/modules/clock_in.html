@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Clock In / Out - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title"><span class="page-title-icon"><i class="bi bi-geo-alt-fill"></i></span>Clock In / Out</h1>
+            <p class="page-subtitle">GPS, face photo, manual, or biometric — your position is saved with each capture</p>
+        </div>
+        <a href="{% url 'module-tab' module='attendance' tab='records' %}" class="btn btn-ghost btn-sm">View records</a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="form-card">
+            <div class="form-card-body">
+                {% if can_select_employee %}
+                <div class="alert alert-light border small mb-3"><i class="bi bi-shield-check me-1"></i> HR mode — you can clock in on behalf of employees.</div>
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data" id="clockForm">
+                    {% csrf_token %}
+
+                    {% if can_select_employee %}
+                    <div class="mb-3">
+                        <label class="form-label">Employee</label>
+                        <select name="employee" class="form-select">
+                            {% for emp in employees %}
+                            <option value="{{ emp.pk }}" {% if employee and emp.pk == employee.pk %}selected{% endif %}>{{ emp.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Check-in method</label>
+                        <select name="method" class="form-select" id="methodSelect">
+                            {% for val, label in methods %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="photoGroup">
+                        <label class="form-label">Photo (face verification)</label>
+                        <input type="file" name="photo" accept="image/*" capture="user" class="form-control" id="photoInput">
+                        <div class="form-text">Photo is stored with GPS coordinates embedded in the record.</div>
+                    </div>
+
+                    <input type="hidden" name="latitude" id="latitude">
+                    <input type="hidden" name="longitude" id="longitude">
+
+                    <div class="p-3 rounded mb-3" style="background:var(--body-bg);border:1px solid var(--border-light);">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="bi bi-pin-map text-primary"></i>
+                            <strong class="small">GPS Position</strong>
+                        </div>
+                        <div id="gpsStatus" class="small text-muted">Detecting location…</div>
+                        <div id="gpsCoords" class="small font-monospace mt-1"></div>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" name="action" value="check_in" class="btn btn-primary flex-fill">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Check In
+                        </button>
+                        <button type="submit" name="action" value="check_out" class="btn btn-ghost flex-fill">
+                            <i class="bi bi-box-arrow-right me-1"></i> Check Out
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const latEl = document.getElementById('latitude');
+    const lngEl = document.getElementById('longitude');
+    const statusEl = document.getElementById('gpsStatus');
+    const coordsEl = document.getElementById('gpsCoords');
+    const methodSelect = document.getElementById('methodSelect');
+    const photoGroup = document.getElementById('photoGroup');
+
+    function togglePhoto() {
+        const m = methodSelect.value;
+        photoGroup.style.display = (m === 'face_recognition') ? 'block' : 'none';
+    }
+    methodSelect.addEventListener('change', togglePhoto);
+    togglePhoto();
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            latEl.value = pos.coords.latitude.toFixed(6);
+            lngEl.value = pos.coords.longitude.toFixed(6);
+            statusEl.textContent = 'Location captured';
+            statusEl.className = 'small text-success';
+            coordsEl.textContent = latEl.value + ', ' + lngEl.value;
+        }, function() {
+            statusEl.textContent = 'GPS unavailable — enable location or use manual check-in';
+            statusEl.className = 'small text-warning';
+        }, { enableHighAccuracy: true, timeout: 10000 });
+    } else {
+        statusEl.textContent = 'Geolocation not supported by this browser';
+    }
+});
+</script>
+{% endblock %}

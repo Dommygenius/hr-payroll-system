@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="welcome-banner">
+    <div class="row align-items-center position-relative">
+        <div class="col-lg-7">
+            <div class="welcome-meta">
+                <span class="dot"></span>
+                <span id="liveDate"></span>
+            </div>
+            <h2><span id="greeting">Welcome back</span>, {{ user.first_name|default:"there" }}</h2>
+            <p>Your workforce overview — attendance, leave, payroll, and hiring at a glance.</p>
+            <div class="welcome-actions">
+                <a href="{% url 'module-create' module='employees' tab='list' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i> Add Employee</a>
+                <a href="{% url 'module-tab' module='leave' tab='requests' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-calendar-check me-1"></i> Leave Queue</a>
+                <a href="{% url 'module-reports' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-bar-chart me-1"></i> Analytics</a>
+            </div>
+        </div>
+        <div class="col-lg-5 d-none d-lg-block">
+            <div class="welcome-stat-pills">
+                <div class="welcome-pill">
+                    <strong>{{ stats.active_employees }}</strong>
+                    <span>Active Staff</span>
+                </div>
+                <div class="welcome-pill">
+                    <strong>{{ stats.pending_leaves }}</strong>
+                    <span>Pending Approvals</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="quick-actions">
+    <a href="{% url 'module' 'employees' %}" class="quick-action"><div class="quick-action-icon"><i class="bi bi-people"></i></div><span>Employees</span></a>
+    <a href="{% url 'module' 'payroll' %}" class="quick-action"><div class="quick-action-icon"><i class="bi bi-cash-stack"></i></div><span>Payroll</span></a>
+    <a href="{% url 'module' 'leave' %}" class="quick-action"><div class="quick-action-icon"><i class="bi bi-calendar-check"></i></div><span>Leave</span></a>
+    <a href="{% url 'module' 'attendance' %}" class="quick-action"><div class="quick-action-icon"><i class="bi bi-clock"></i></div><span>Attendance</span></a>
+    <a href="{% url 'module' 'recruitment' %}" class="quick-action"><div class="quick-action-icon"><i class="bi bi-person-plus"></i></div><span>Recruit</span></a>
+    <a href="{% url 'module-ai' %}" class="quick-action"><div class="quick-action-icon"><i class="bi bi-stars"></i></div><span>AI</span></a>
+</div>
+
+<div class="stat-grid">
+    <div class="row g-3 mb-3">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.total_employees }}</span>
+                    <span class="stat-label">Total Employees</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-success">
+                <div class="stat-icon"><i class="bi bi-person-check-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.present_today }}</span>
+                    <span class="stat-label">Present Today</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-warning">
+                <div class="stat-icon"><i class="bi bi-calendar-x-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.on_leave_today }}</span>
+                    <span class="stat-label">On Leave Today</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-info">
+                <div class="stat-icon"><i class="bi bi-briefcase-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.open_positions }}</span>
+                    <span class="stat-label">Open Positions</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-secondary">
+                <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.pending_leaves }}</span>
+                    <span class="stat-label">Pending Leaves</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-danger">
+                <div class="stat-icon"><i class="bi bi-person-lines-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.pending_applicants }}</span>
+                    <span class="stat-label">New Applicants</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.payroll_runs }}</span>
+                    <span class="stat-label">Payroll Pending</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card stat-success">
+                <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ stats.active_employees }}</span>
+                    <span class="stat-label">Active Staff</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="dashboard-card workforce-chart-card">
+            <div class="card-header">
+                <div>
+                    <h5 class="card-title mb-0">Workforce by Department</h5>
+                    <small class="text-muted">Headcount distribution across teams</small>
+                </div>
+                <a href="{% url 'module-reports' %}" class="btn btn-sm btn-ghost">Full analytics</a>
+            </div>
+            <div class="card-body">
+                <div class="workforce-chart-summary" id="deptSummary"></div>
+                <div class="workforce-chart-empty" id="deptChartEmpty">
+                    <i class="bi bi-pie-chart"></i>
+                    <p class="mb-0">No department data yet. Assign employees to departments to see the breakdown.</p>
+                </div>
+                <div class="workforce-chart-layout">
+                    <div class="workforce-donut-wrap">
+                        <canvas id="deptChart"></canvas>
+                    </div>
+                    <div class="workforce-dept-legend" id="deptLegend"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="dashboard-card mb-4">
+            <div class="card-header"><h5 class="card-title">Announcements</h5></div>
+            <div class="card-body p-0">
+                {% for announcement in announcements %}
+                <div class="list-item-modern">
+                    <div class="quick-action-icon" style="width:32px;height:32px;font-size:0.85rem;"><i class="bi bi-megaphone"></i></div>
+                    <div class="list-item-content">
+                        <strong>{{ announcement.title }}</strong>
+                        <small>{{ announcement.publish_date|date:"M d, Y" }}</small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state py-4">
+                    <p class="mb-0 text-muted small">No announcements yet</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><h5 class="card-title">Recent Hires</h5></div>
+            <div class="card-body p-0">
+                {% for emp in recent_employees %}
+                <div class="list-item-modern">
+                    <div class="avatar-sm">{{ emp.first_name|first }}{{ emp.last_name|first }}</div>
+                    <div class="list-item-content">
+                        <strong>{{ emp.full_name }}</strong>
+                        <small>{{ emp.designation|default:"—" }}</small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state py-4">
+                    <p class="mb-0 text-muted small">No recent hires</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="/static/js/hrms-charts.js?v=2" defer></script>
+<script defer>
+window.initPageCharts = function() {
+    if (typeof HRMSCharts === 'undefined') return;
+    const h = new Date().getHours();
+    const gEl = document.getElementById('greeting');
+    if (gEl) gEl.textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening');
+
+    const el = document.getElementById('liveDate');
+    if (el) el.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    HRMSCharts.renderWorkforceByDepartment({
+        canvasId: 'deptChart',
+        legendId: 'deptLegend',
+        summaryId: 'deptSummary',
+        emptyId: 'deptChartEmpty',
+        data: {{ dept_breakdown_json|safe }},
+    });
+};
+</script>
+{% endblock %}

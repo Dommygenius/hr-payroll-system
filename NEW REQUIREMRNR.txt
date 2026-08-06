@@ -1,0 +1,40 @@
+01. add leave days exceptios 
+-pay or leave how much
+-no pay for leave 
+if no leave pay
+else no oay
+
+- intern
+optional 
+
+
+02. on attendance the gps/ face and manul optional biometric 
+03. 
+
+on attendace if late add exception
+on take picand the pic shouild have longs and lats 
+
+add positon on database 
+on roles -
+
+on roles 
+main user roles 
+- user 
+full name  and email 
+and passwrods 
+
+
+on attendace the role should be like 
+
+HR - can 
+
+on database add anothre table for tasks 
+
+on task add task and su task and the manager can asisn task and the eakier the perdroac ethe higher the point and the higher the perfomace 
+
+the main task can be divided into sub tasks and the completion rate can be due to sub task completion 
+
+if the task completed is it withing the timeline ? if yes then we plot the montky peromcane by comparing timeline and perfromacne and how many task you completed (this can helpo us in bonus calcutation )
+
+on attendance exlude leave days and update the leave commanr and day of leave completion 
+`

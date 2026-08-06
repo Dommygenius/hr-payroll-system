@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Assistant - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">AI Assistant</li>
+        </ol>
+    </nav>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title"><span class="page-title-icon"><i class="bi bi-stars"></i></span>AI Assistant</h1>
+            <p class="page-subtitle">Smart HR chatbot, resume screening, and predictive analytics</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="dashboard-card ai-chat-card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-chat-dots-fill"></i></span>
+                <div>
+                    <h5 class="mb-0">HR Chatbot</h5>
+                    <small class="text-muted">Ask about leave, payslips, attendance & more</small>
+                </div>
+            </div>
+            <div class="ai-chat-body" id="chatMessages">
+                {% for msg in chat_history %}
+                <div class="chat-bubble chat-{{ msg.role }}">
+                    <small class="chat-role">{% if msg.role == 'user' %}You{% else %}AI Assistant{% endif %}</small>
+                    <div>{{ msg.content }}</div>
+                </div>
+                {% empty %}
+                <div class="empty-state py-5">
+                    <div class="empty-state-icon"><i class="bi bi-stars"></i></div>
+                    <h6>How can I help you today?</h6>
+                    <p>Try: "How do I apply for leave?" or "Where are my payslips?"</p>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="card-footer bg-transparent border-top p-3">
+                <form method="post" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="chat">
+                    <input type="text" name="message" class="form-control" placeholder="Ask anything about HR..." required>
+                    <button type="submit" class="btn btn-primary px-3"><i class="bi bi-send-fill"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="dashboard-card mb-4">
+            <div class="card-header"><h5 class="card-title">AI Capabilities</h5></div>
+            <div class="card-body p-0">
+                <div class="list-item-modern">
+                    <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-file-earmark-person-fill"></i></span>
+                    <div class="list-item-content"><strong>Resume Screening</strong><small>Score & rank candidates</small></div>
+                </div>
+                <div class="list-item-modern">
+                    <span class="ai-feature-icon bg-warning-subtle"><i class="bi bi-exclamation-triangle-fill"></i></span>
+                    <div class="list-item-content"><strong>Payroll Anomalies</strong><small>Detect unusual payments</small></div>
+                </div>
+                <div class="list-item-modern">
+                    <span class="ai-feature-icon bg-danger-subtle"><i class="bi bi-graph-down-arrow"></i></span>
+                    <div class="list-item-content"><strong>Attrition Prediction</strong><small>Identify flight risks</small></div>
+                </div>
+                <div class="list-item-modern">
+                    <span class="ai-feature-icon bg-info-subtle"><i class="bi bi-clock-history"></i></span>
+                    <div class="list-item-content"><strong>Attendance Patterns</strong><small>Spot anomalies early</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header"><h5 class="card-title">Recent AI Jobs</h5></div>
+            <div class="card-body p-0">
+                {% for job in ai_jobs %}
+                <div class="list-item-modern">
+                    <div class="list-item-content">
+                        <strong>{{ job.get_job_type_display }}</strong>
+                        <small>{{ job.created_at|timesince }} ago</small>
+                    </div>
+                    <span class="status-badge status-{% if job.status == 'completed' %}approved{% elif job.status == 'failed' %}rejected{% else %}pending{% endif %}">{{ job.status }}</span>
+                </div>
+                {% empty %}
+                <div class="empty-state py-4"><p class="mb-0 text-muted small">No AI jobs run yet</p></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chat = document.getElementById('chatMessages');
+    if (chat) chat.scrollTop = chat.scrollHeight;
+});
+</script>
+{% endblock %}
