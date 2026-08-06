@@ -20,7 +20,11 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-$existing = git remote get-url origin 2>$null
+$existing = $null
+git remote get-url origin 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    $existing = git remote get-url origin
+}
 if ($existing) {
     Write-Host "Origin already set: $existing"
 } else {

@@ -199,17 +199,17 @@ This project is configured to **push automatically**:
 
 2. Create the remote repo and push:
    ```powershell
-   powershell -File scripts/setup_github.ps1
+   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_github.ps1
    ```
 
 3. Install git hooks (if not already installed):
    ```powershell
-   powershell -File scripts/install_git_hooks.ps1
+   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install_git_hooks.ps1
    ```
 
 Manual push anytime:
 ```powershell
-powershell -File scripts/auto_push.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/auto_push.ps1
 ```
 
 ## License
