@@ -5,6 +5,8 @@ def dashboard_context(request):
     context = {
         'app_name': 'HRMS Pro',
         'app_version': '1.0.0',
+        'tenant': getattr(request, 'tenant', None),
+        'tenant_slug': getattr(request, 'tenant_slug', None),
     }
     if request.user.is_authenticated:
         context['user_theme'] = getattr(request.user, 'theme', 'light')
