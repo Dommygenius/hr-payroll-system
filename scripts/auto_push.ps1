@@ -1,5 +1,4 @@
 # Auto-commit (if needed) and push to GitHub origin.
-# Used by git post-commit hook and Cursor agent stop hook.
 param(
     [switch]$PushOnly,
     [string]$Message = "Auto-sync: workspace update"
@@ -10,7 +9,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $repoRoot
 
 if (-not (Test-Path ".git")) {
-    Write-Host "[auto_push] Not a git repository — skipping."
+    Write-Host "[auto_push] Not a git repository - skipping."
     exit 0
 }
 
@@ -23,11 +22,11 @@ if (-not $remote) {
 
 if (-not $PushOnly) {
     git add -A
-    $status = git status --porcelain
-    if ($status) {
+    $dirty = git status --porcelain
+    if ($dirty) {
         git commit -m $Message
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "[auto_push] Commit failed — skipping push."
+            Write-Host "[auto_push] Commit failed - skipping push."
             exit $LASTEXITCODE
         }
         Write-Host "[auto_push] Committed pending changes."

@@ -9,14 +9,11 @@ if (-not (Test-Path (Join-Path $repoRoot ".git"))) {
     Write-Error "Run git init first."
 }
 
-# Git for Windows runs hooks via sh — use a shell script that invokes PowerShell.
 $hookPath = $autoPush -replace '\\', '/'
-$hookContent = @"
-#!/bin/sh
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$hookPath" -PushOnly
-"@
+$hookContent = "#!/bin/sh`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$hookPath`" -PushOnly`n"
 
-Set-Content -Path $target -Value $hookContent -Encoding UTF8
+# LF line endings required — CRLF breaks the shebang on Windows Git.
+[System.IO.File]::WriteAllText($target, $hookContent)
 
 Write-Host "Installed post-commit hook -> $target"
 Write-Host "Every git commit will auto-push to origin."
