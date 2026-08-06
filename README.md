@@ -181,6 +181,37 @@ pytest
 pytest --cov=apps --cov-report=html
 ```
 
+## GitHub Auto-Push
+
+This project is configured to **push automatically**:
+
+| Trigger | Behavior |
+|---------|----------|
+| **After every git commit** | Post-commit hook pushes to `origin` |
+| **After Cursor agent sessions** | Stop hook commits pending changes and pushes |
+
+### One-time setup
+
+1. Authenticate GitHub CLI:
+   ```powershell
+   gh auth login -h github.com
+   ```
+
+2. Create the remote repo and push:
+   ```powershell
+   powershell -File scripts/setup_github.ps1
+   ```
+
+3. Install git hooks (if not already installed):
+   ```powershell
+   powershell -File scripts/install_git_hooks.ps1
+   ```
+
+Manual push anytime:
+```powershell
+powershell -File scripts/auto_push.ps1
+```
+
 ## License
 
 Proprietary — All rights reserved.
