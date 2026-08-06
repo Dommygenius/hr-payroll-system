@@ -426,8 +426,12 @@ def ai_view(request):
             message = request.POST.get('message', '').strip()
             if message:
                 conv, _ = ChatbotConversation.objects.get_or_create(user=request.user)
+                prior = [
+                    {'role': m.role, 'content': m.content}
+                    for m in conv.messages.order_by('created_at')
+                ]
                 ChatbotMessage.objects.create(conversation=conv, role='user', content=message)
-                reply = HRChatbotService.respond(message)
+                reply = HRChatbotService.respond(message, history=prior)
                 ChatbotMessage.objects.create(conversation=conv, role='assistant', content=reply)
                 chat_response = reply
 

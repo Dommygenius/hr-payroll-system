@@ -76,13 +76,18 @@ class ChatbotPostMessageView(APIView):
         else:
             conversation = ChatbotConversation.objects.create(user=request.user)
 
+        prior = [
+            {'role': m.role, 'content': m.content}
+            for m in conversation.messages.order_by('created_at')
+        ]
+
         ChatbotMessage.objects.create(
             conversation=conversation,
             role='user',
             content=message,
         )
 
-        response_text = HRChatbotService.respond(message)
+        response_text = HRChatbotService.respond(message, history=prior)
 
         assistant_message = ChatbotMessage.objects.create(
             conversation=conversation,

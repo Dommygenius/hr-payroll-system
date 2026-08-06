@@ -1,7 +1,19 @@
 """AI service layer for HRMS intelligent features."""
 import logging
 
+import requests
+from django.conf import settings
+
 logger = logging.getLogger(__name__)
+
+GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
+
+HR_SYSTEM_PROMPT = (
+    'You are HRMS Pro Assistant, a helpful HR and payroll assistant for employees and managers. '
+    'Answer clearly and briefly about leave, payslips, attendance, payroll, recruitment, '
+    'performance reviews, company policies, and using the HRMS system. '
+    'If you do not know something specific to the company, say so and suggest contacting HR.'
+)
 
 
 class ResumeScreeningService:
@@ -127,7 +139,7 @@ class AttendanceAnomalyService:
 
 
 class HRChatbotService:
-    """Simple HR chatbot with keyword-based responses."""
+    """HR chatbot powered by Google Gemini with keyword fallback."""
 
     RESPONSES = {
         'leave': 'You can apply for leave through the Employee Self-Service portal under Leave Management.',
@@ -137,7 +149,64 @@ class HRChatbotService:
     }
 
     @classmethod
-    def respond(cls, message: str) -> str:
+    def respond(cls, message: str, history: list | None = None) -> str:
+        reply = cls._gemini_reply(message, history or [])
+        if reply:
+            return reply
+        return cls._keyword_reply(message)
+
+    @classmethod
+    def _gemini_reply(cls, message: str, history: list) -> str | None:
+        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if not api_key:
+            return None
+
+        model = getattr(settings, 'GEMINI_MODEL', 'gemini-2.0-flash')
+        url = GEMINI_API_URL.format(model=model)
+
+        contents = []
+        for item in history[-10:]:
+            role = item.get('role', 'user')
+            if role == 'assistant':
+                role = 'model'
+            if role not in ('user', 'model'):
+                continue
+            contents.append({
+                'role': role,
+                'parts': [{'text': item.get('content', '')}],
+            })
+        contents.append({'role': 'user', 'parts': [{'text': message}]})
+
+        payload = {
+            'systemInstruction': {'parts': [{'text': HR_SYSTEM_PROMPT}]},
+            'contents': contents,
+            'generationConfig': {
+                'temperature': 0.7,
+                'maxOutputTokens': 1024,
+            },
+        }
+
+        try:
+            response = requests.post(
+                url,
+                params={'key': api_key},
+                json=payload,
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+            candidates = data.get('candidates') or []
+            if not candidates:
+                return None
+            parts = candidates[0].get('content', {}).get('parts') or []
+            text = ''.join(part.get('text', '') for part in parts).strip()
+            return text or None
+        except requests.RequestException as exc:
+            logger.warning('Gemini chatbot request failed: %s', exc)
+            return None
+
+    @classmethod
+    def _keyword_reply(cls, message: str) -> str:
         message_lower = message.lower()
         for keyword, response in cls.RESPONSES.items():
             if keyword in message_lower:
