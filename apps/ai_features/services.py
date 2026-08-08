@@ -13,7 +13,11 @@ HR_SYSTEM_PROMPT = (
     'Give clear, practical answers in plain language. Use short paragraphs or numbered steps when helpful. '
     'Cover leave, payslips, attendance, payroll, recruitment, performance, policies, and using the HRMS system. '
     'When the user asks follow-up questions like "yes" or "help me more", use the conversation history for context. '
-    'If company-specific data is provided below, use it. Otherwise say you do not have that detail and suggest contacting HR.'
+    'If company-specific data is provided below, use it. Otherwise say you do not have that detail and suggest contacting HR. '
+    'For managers and HR with a pending leave queue: summarize requests clearly (who, type, dates, days, reason), '
+    'highlight short or missing descriptions, and draft approve/reject notes when asked. '
+    'Never silently approve or reject leave yourself — provide drafts and guide them to Leave → Requests to act. '
+    'When drafting rejection notes, be professional and specific to the employee reason when available.'
 )
 
 
@@ -206,6 +210,8 @@ class HRChatbotService:
             lines.append(f"- Department: {context['department']}")
         if context.get('company_name'):
             lines.append(f"- Company: {context['company_name']}")
+        if context.get('role'):
+            lines.append(f"- Role: {context['role']}")
 
         balances = context.get('leave_balances') or []
         if balances:
@@ -214,12 +220,30 @@ class HRChatbotService:
 
         pending = context.get('pending_leave')
         if pending:
-            lines.append(f'- Pending leave requests: {pending}')
+            lines.append(f'- Own open leave requests: {pending}')
 
         recent = context.get('recent_attendance')
         if recent:
             lines.append(
                 f"- Last 7 days attendance: {recent['present']} present, {recent['late']} late"
+            )
+
+        approvals = context.get('pending_approvals') or []
+        if context.get('can_manage_leave'):
+            lines.append('\nLeave approval duties (manager/HR):')
+            lines.append(f"- Pending approvals in queue: {context.get('pending_approvals_count', 0)}")
+            if approvals:
+                lines.append('- Queue details:')
+                for item in approvals[:8]:
+                    reason = item.get('reason') or 'No description'
+                    lines.append(
+                        f"  • {item['employee']} | {item['leave_type']} | "
+                        f"{item['start_date']} → {item['end_date']} ({item['days']} days) | "
+                        f"Reason: {reason}"
+                    )
+            lines.append(
+                '- When asked to summarize or draft approve/reject notes, use this queue. '
+                'Remind the user to complete Approve/Reject under Leave → Requests.'
             )
 
         lines.append(
@@ -238,23 +262,54 @@ class HRChatbotService:
 
         if intent == 'greeting':
             name = context.get('first_name', 'there')
+            extra = ''
+            if context.get('can_manage_leave'):
+                count = context.get('pending_approvals_count', 0)
+                extra = (
+                    f" As a manager/HR, I can also summarize **{count}** pending leave "
+                    f"approval(s) and draft approve/reject notes.\n\n"
+                )
             return (
                 f"Hello {name}! I'm your HR assistant. I can help with leave requests, "
                 f"payslips, attendance, payroll, performance reviews, and HR policies.\n\n"
+                f"{extra}"
                 f"What would you like help with today?"
             )
 
         if intent == 'help':
-            return (
-                "Here's what I can help you with:\n\n"
-                "1. **Leave** — apply, check balance, track approvals\n"
-                "2. **Payslips** — download and understand your pay\n"
-                "3. **Attendance** — clock-in, view records, late exceptions\n"
-                "4. **Payroll** — salary, deductions, and pay dates\n"
-                "5. **Performance** — goals, tasks, and reviews\n"
-                "6. **Account** — password and profile settings\n\n"
-                "Try asking: *How do I apply for annual leave?* or *Where is my payslip?*"
-            )
+            help_lines = [
+                "Here's what I can help you with:\n",
+                "1. **Leave** — apply, check balance, track approvals",
+                "2. **Payslips** — download and understand your pay",
+                "3. **Attendance** — clock-in, view records, late exceptions",
+                "4. **Payroll** — salary, deductions, and pay dates",
+                "5. **Performance** — goals, tasks, and reviews",
+                "6. **Account** — password and profile settings",
+            ]
+            if context.get('can_manage_leave'):
+                help_lines.extend([
+                    "",
+                    "**Manager / HR leave duties:**",
+                    "• Summarize pending leave approvals",
+                    "• Draft approval notes",
+                    "• Draft rejection notes with a clear reason",
+                    "",
+                    "Try: *Summarize pending leave* or *Draft a rejection note*",
+                ])
+            else:
+                help_lines.append(
+                    "\nTry asking: *How do I apply for annual leave?* or *Where is my payslip?*"
+                )
+            return '\n'.join(help_lines)
+
+        if intent == 'leave_approvals':
+            return cls._leave_approvals_reply(context)
+
+        if intent == 'draft_approve':
+            return cls._draft_leave_decision(context, decision='approve')
+
+        if intent == 'draft_reject':
+            return cls._draft_leave_decision(context, decision='reject')
 
         if intent in ('leave', 'leave_followup'):
             return cls._leave_reply(context, last_assistant, intent == 'leave_followup')
@@ -313,6 +368,8 @@ class HRChatbotService:
         return (
             "I'm not sure I understood that. I can help with:\n\n"
             "• Leave and time off\n"
+            "• Pending leave approvals (managers/HR)\n"
+            "• Draft approve/reject notes\n"
             "• Payslips and payroll\n"
             "• Attendance and clock-in\n"
             "• Performance and tasks\n"
@@ -338,6 +395,25 @@ class HRChatbotService:
             return 'payroll'
         if re.search(r'\b(performance|review|kpi|goal|task)\b', text):
             return 'performance'
+        if re.search(
+            r'\b(draft\s+(an?\s+)?(approval|approve)|approve\s+note|approval\s+note|'
+            r'write\s+(an?\s+)?approv)',
+            text,
+        ):
+            return 'draft_approve'
+        if re.search(
+            r'\b(draft\s+(an?\s+)?(rejection|reject)|reject\s+note|rejection\s+note|'
+            r'write\s+(an?\s+)?reject)',
+            text,
+        ):
+            return 'draft_reject'
+        if re.search(
+            r'\b(pending\s+leave|leave\s+approv|approval\s+queue|awaiting\s+approval|'
+            r'summariz(e|e)\s+(pending\s+)?leave|leave\s+queue|who\s+is\s+on\s+leave|'
+            r'leave\s+request(s)?\s+(to\s+)?(review|approv))',
+            text,
+        ):
+            return 'leave_approvals'
         if re.search(r'\b(leave|vacation|time off|annual|sick day|holiday)\b', text):
             return 'leave'
         if last_assistant and 'leave' in last_assistant.lower():
@@ -352,6 +428,12 @@ class HRChatbotService:
     @classmethod
     def _followup_from_context(cls, text: str, last_assistant: str, context: dict) -> str:
         last_lower = last_assistant.lower()
+        if 'approv' in last_lower or 'pending leave' in last_lower:
+            if 'reject' in text:
+                return cls._draft_leave_decision(context, decision='reject')
+            if 'approv' in text:
+                return cls._draft_leave_decision(context, decision='approve')
+            return cls._leave_approvals_reply(context)
         if 'leave' in last_lower:
             return cls._leave_reply(context, last_assistant, followup=True)
         if 'payslip' in last_lower or 'payroll' in last_lower:
@@ -370,9 +452,10 @@ class HRChatbotService:
             )
         return (
             "Happy to help further. Try asking:\n"
+            "• *Summarize pending leave*\n"
+            "• *Draft an approval note*\n"
             "• *How do I apply for leave?*\n"
-            "• *Where is my payslip?*\n"
-            "• *How do I clock in?*"
+            "• *Where is my payslip?*"
         )
 
     @classmethod
@@ -382,7 +465,7 @@ class HRChatbotService:
             "1. Open **Leave Management** from the sidebar",
             "2. Click **New Leave Request** (or use the form in Leave Requests)",
             "3. Select leave type (annual, sick, unpaid, etc.)",
-            "4. Pick start and end dates and add a reason if required",
+            "4. Pick start and end dates and add a **description/reason** (shown during approval)",
             "5. Submit — your manager will receive it for approval",
         ]
 
@@ -396,11 +479,117 @@ class HRChatbotService:
         if pending:
             lines.append(f"\nYou have **{pending}** leave request(s) awaiting approval.")
 
+        if context.get('can_manage_leave'):
+            count = context.get('pending_approvals_count', 0)
+            lines.append(
+                f"\nAs an approver, you currently have **{count}** pending leave request(s) to review. "
+                "Ask me to *summarize pending leave* or *draft an approval note*."
+            )
+
         if followup and last_assistant:
             lines.insert(0, "Sure — here are the detailed steps:\n")
 
         lines.append("\nNeed a specific leave type explained? Ask e.g. *Can I take sick leave?*")
         return '\n'.join(lines)
+
+    @classmethod
+    def _leave_approvals_reply(cls, context: dict) -> str:
+        if not context.get('can_manage_leave'):
+            return (
+                "Leave approval summaries are for managers and HR. "
+                "You can still ask about **your own leave** balance or how to apply.\n\n"
+                "Your open requests: **"
+                f"{context.get('pending_leave', 0)}**."
+            )
+
+        approvals = context.get('pending_approvals') or []
+        count = context.get('pending_approvals_count', 0)
+        if not approvals:
+            return (
+                "There are **no pending leave requests** waiting for approval right now.\n\n"
+                "Check again later under **Leave → Requests**, or ask me to help once new requests arrive."
+            )
+
+        lines = [
+            f"**Pending leave approvals ({count}):**\n",
+        ]
+        for idx, item in enumerate(approvals[:8], start=1):
+            reason = (item.get('reason') or '').strip() or '_No description provided_'
+            lines.append(
+                f"**{idx}. {item['employee']}** — {item['leave_type']}\n"
+                f"   • Period: {item['start_date']} → {item['end_date']} ({item['days']} days)\n"
+                f"   • Description: {reason}"
+            )
+
+        missing = sum(1 for i in approvals if not (i.get('reason') or '').strip())
+        if missing:
+            lines.append(
+                f"\n⚠ **{missing}** request(s) have no description — ask the employee for more detail before approving."
+            )
+
+        lines.append(
+            "\nI can **draft an approval note** or **draft a rejection note** for the first request "
+            "(or name the employee). Then open **Leave → Requests → Edit** to Approve / Reject."
+        )
+        return '\n'.join(lines)
+
+    @classmethod
+    def _draft_leave_decision(cls, context: dict, decision: str = 'approve') -> str:
+        if not context.get('can_manage_leave'):
+            return (
+                "Drafting approve/reject notes is available to managers and HR approvers. "
+                "Employees: track your request status under **Leave → Requests**."
+            )
+
+        approvals = context.get('pending_approvals') or []
+        if not approvals:
+            return (
+                "No pending leave requests to draft notes for. "
+                "When requests arrive, ask me again or open **Leave → Requests**."
+            )
+
+        item = approvals[0]
+        reason = (item.get('reason') or '').strip()
+        employee = item['employee']
+        leave_type = item['leave_type']
+        period = f"{item['start_date']} → {item['end_date']}"
+        days = item['days']
+
+        if decision == 'approve':
+            if reason:
+                note = (
+                    f"Approved. {leave_type} for {employee} ({period}, {days} days) "
+                    f"is cleared based on the submitted description: \"{reason[:180]}\"."
+                )
+            else:
+                note = (
+                    f"Approved. {leave_type} for {employee} ({period}, {days} days) "
+                    f"is cleared. Please ensure coverage is arranged with the team."
+                )
+            title = 'Draft approval note'
+            tip = 'Paste into **Approval notes** if needed, set status to **Approved**, or click **Approve**.'
+        else:
+            if reason:
+                note = (
+                    f"Unable to approve this {leave_type} request for {period} at this time. "
+                    f"We reviewed your reason (\"{reason[:140]}\") and need adjusted dates or "
+                    f"additional documentation. Please revise and resubmit, or speak with your manager."
+                )
+            else:
+                note = (
+                    f"Unable to approve this {leave_type} request for {period}: "
+                    f"no description was provided. Please resubmit with a clear reason and preferred dates."
+                )
+            title = 'Draft rejection note'
+            tip = 'Paste into **Approval notes / Rejection reason**, then click **Reject** on the leave edit form.'
+
+        return (
+            f"**{title}** for **{employee}** ({leave_type}, {days} days):\n\n"
+            f"> {note}\n\n"
+            f"**Request description:** {reason or '_None_'}\n\n"
+            f"{tip}\n"
+            f"Open: **Leave → Requests → Edit**."
+        )
 
     @staticmethod
     def _last_assistant_text(history: list) -> str:
@@ -428,9 +617,15 @@ class HRChatbotService:
         if not user or not getattr(user, 'is_authenticated', False):
             return {}
 
+        from apps.accounts.permissions import can_manage_leave
+
         company = getattr(user, 'company', None)
         context = {
             'first_name': getattr(user, 'first_name', None) or user.get_username().split('@')[0],
+            'role': getattr(user, 'role', '') or 'employee',
+            'can_manage_leave': bool(can_manage_leave(user)),
+            'pending_approvals': [],
+            'pending_approvals_count': 0,
         }
         if company:
             context['company_name'] = company.name
@@ -454,44 +649,66 @@ class HRChatbotService:
             if not employee and company:
                 employee = employee_qs.filter(email=user.email, company=company).first()
 
-            if not employee:
-                return context
+            if employee and company and employee.company_id != company.id:
+                employee = None
 
-            # Hard stop: never inject another company's employee into the prompt
-            if company and employee.company_id != company.id:
-                return context
+            if employee:
+                context['employee_name'] = employee.full_name
+                context['department'] = getattr(employee.department, 'name', 'Employee')
 
-            context['employee_name'] = employee.full_name
-            context['department'] = getattr(employee.department, 'name', 'Employee')
+                balances = LeaveBalance.objects.filter(
+                    employee=employee,
+                    company=employee.company,
+                ).select_related('leave_type')[:5]
+                context['leave_balances'] = [
+                    {
+                        'type': b.leave_type.name,
+                        'days': float(b.available),
+                    }
+                    for b in balances
+                ]
 
-            balances = LeaveBalance.objects.filter(
-                employee=employee,
-                company=employee.company,
-            ).select_related('leave_type')[:5]
-            context['leave_balances'] = [
-                {
-                    'type': b.leave_type.name,
-                    'days': float(b.available),
+                context['pending_leave'] = LeaveRequest.objects.filter(
+                    employee=employee,
+                    company=employee.company,
+                    status__in=('pending', 'submitted', 'approved'),
+                ).exclude(status='completed').count()
+
+                week_ago = timezone.now().date() - timedelta(days=7)
+                records = AttendanceRecord.objects.filter(
+                    employee=employee,
+                    company=employee.company,
+                    date__gte=week_ago,
+                )
+                context['recent_attendance'] = {
+                    'present': records.filter(status='present').count(),
+                    'late': records.filter(status='late').count(),
                 }
-                for b in balances
-            ]
 
-            context['pending_leave'] = LeaveRequest.objects.filter(
-                employee=employee,
-                company=employee.company,
-                status__in=('pending', 'submitted', 'approved'),
-            ).exclude(status='completed').count()
-
-            week_ago = timezone.now().date() - timedelta(days=7)
-            records = AttendanceRecord.objects.filter(
-                employee=employee,
-                company=employee.company,
-                date__gte=week_ago,
-            )
-            context['recent_attendance'] = {
-                'present': records.filter(status='present').count(),
-                'late': records.filter(status='late').count(),
-            }
+            # Manager / HR leave approval queue (company-scoped)
+            if context['can_manage_leave'] and company:
+                pending_qs = (
+                    LeaveRequest.objects.filter(
+                        company=company,
+                        status=LeaveRequest.Status.PENDING,
+                    )
+                    .select_related('employee', 'leave_type')
+                    .order_by('start_date', 'created_at')
+                )
+                context['pending_approvals_count'] = pending_qs.count()
+                context['pending_approvals'] = [
+                    {
+                        'id': str(req.id),
+                        'employee': str(req.employee),
+                        'leave_type': str(req.leave_type),
+                        'start_date': str(req.start_date),
+                        'end_date': str(req.end_date),
+                        'days': float(req.days_requested),
+                        'reason': (req.reason or '')[:240],
+                        'status': req.status,
+                    }
+                    for req in pending_qs[:8]
+                ]
         except Exception as exc:
             logger.debug('Chatbot user context lookup failed: %s', exc)
 

@@ -8,8 +8,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from apps.dashboard.helpers import apply_search, cell_value, get_request_company, get_user_company, scoped_queryset
-from apps.dashboard.module_config import MODULES, SPECIAL_MODULES, get_module, get_tab
+from apps.dashboard.helpers import (
+    apply_search,
+    cell_value,
+    detail_fields_payload,
+    get_request_company,
+    get_user_company,
+    scoped_queryset,
+)from apps.dashboard.module_config import MODULES, SPECIAL_MODULES, get_module, get_tab
 
 MODULE_PAGE_SIZE = 50
 
@@ -118,13 +124,20 @@ def module_view(request, module, tab=None):
     )
     qs = apply_search(qs, search, tab_cfg.get('search_fields', []))
 
+    detail_fields = tab_cfg.get('detail_fields') or []
     rows = []
     page_size = MODULE_PAGE_SIZE
     for obj in qs[:page_size]:
-        rows.append({
+        row = {
             'id': str(obj.pk),
             'cells': [cell_value(obj, col[0]) for col in tab_cfg['columns']],
-        })
+        }
+        if detail_fields:
+            row['title'] = cell_value(obj, 'full_name') or cell_value(obj, 'employee_id') or str(obj)
+            row['subtitle'] = cell_value(obj, 'designation') if hasattr(obj, 'designation') else ''
+            row['status'] = cell_value(obj, 'employment_status') if hasattr(obj, 'employment_status') else ''
+            row['detail'] = detail_fields_payload(obj, detail_fields)
+        rows.append(row)
 
     total_count = qs.count()
 
@@ -138,7 +151,9 @@ def module_view(request, module, tab=None):
         'tabs': mod['tabs'],
         'title': mod['title'],
         'rows': rows,
+        'rows_json': json.dumps(rows, default=str),
         'columns': tab_cfg['columns'],
+        'detail_fields': detail_fields,
         'search': search,
         'stats': stats,
         'total_count': total_count,

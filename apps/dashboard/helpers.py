@@ -58,3 +58,21 @@ def cell_value(obj, attr):
     if isinstance(val, bool):
         return 'Yes' if val else 'No'
     return val
+
+
+def detail_fields_payload(obj, detail_fields):
+    """Build read-only detail rows for the select-to-inspect panel."""
+    if not detail_fields:
+        return []
+    rows = []
+    for attr, label in detail_fields:
+        value = cell_value(obj, attr)
+        if value == '' or value is None:
+            value = '—'
+        rows.append({
+            'attr': attr,
+            'label': label,
+            'value': value,
+            'is_status': attr.endswith('_status') or attr == 'status',
+        })
+    return rows

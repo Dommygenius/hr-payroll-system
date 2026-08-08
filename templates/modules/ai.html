@@ -14,7 +14,7 @@
     <div class="page-header">
         <div>
             <h1 class="page-title"><span class="page-title-icon"><i class="bi bi-stars"></i></span>AI Assistant</h1>
-            <p class="page-subtitle">Smart HR chatbot, resume screening, and predictive analytics</p>
+            <p class="page-subtitle">HR chatbot that helps with leave approvals, drafts, and day-to-day questions</p>
         </div>
     </div>
 </div>
@@ -27,7 +27,7 @@
                     <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-chat-dots-fill"></i></span>
                     <div>
                         <h5 class="mb-0">HR Chatbot</h5>
-                        <small class="text-muted">Ask about leave, payslips, attendance &amp; more</small>
+                        <small class="text-muted">Leave approvals, drafts, payslips &amp; more</small>
                     </div>
                 </div>
                 <button type="button" class="btn btn-sm btn-ghost" id="clearChatBtn" title="Clear chat"><i class="bi bi-trash"></i></button>
@@ -42,7 +42,7 @@
                 <div class="empty-state py-5" id="chatEmpty">
                     <div class="empty-state-icon"><i class="bi bi-stars"></i></div>
                     <h6>How can I help you today?</h6>
-                    <p>Try: "How do I apply for leave?" or "Where are my payslips?"</p>
+                    <p>Try: "Summarize pending leave" or "Draft an approval note"</p>
                 </div>
                 {% endfor %}
                 <div class="chat-bubble chat-assistant d-none" id="typingIndicator">
@@ -58,9 +58,10 @@
                     <button type="submit" class="btn btn-primary px-3" id="chatSendBtn"><i class="bi bi-send-fill"></i></button>
                 </form>
                 <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="Summarize pending leave">Pending leave</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="Draft an approval note">Draft approval</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="Draft a rejection note">Draft rejection</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="How do I apply for annual leave?">Apply for leave</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="Where is my payslip?">My payslip</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="How do I clock in?">Clock in</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary ai-suggest" data-msg="What can you help me with?">Help</button>
                 </div>
             </div>
@@ -73,6 +74,10 @@
                 <div class="list-item-modern">
                     <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-chat-dots-fill"></i></span>
                     <div class="list-item-content"><strong>HR Chatbot</strong><small>Leave, payroll &amp; policy Q&amp;A</small></div>
+                </div>
+                <div class="list-item-modern">
+                    <span class="ai-feature-icon bg-success-subtle"><i class="bi bi-journal-check"></i></span>
+                    <div class="list-item-content"><strong>Leave approval assist</strong><small>Summarize queue &amp; draft notes</small></div>
                 </div>
                 <div class="list-item-modern">
                     <span class="ai-feature-icon bg-primary-subtle"><i class="bi bi-file-earmark-person-fill"></i></span>

@@ -1039,6 +1039,104 @@ h1, h2, h3, h4, h5, h6, .page-title, .card-title, .stat-value {
 
 .module-table tbody tr:hover .table-actions { opacity: 1; }
 
+/* Employee list + detail split */
+.employee-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.employee-list-pane,
+.employee-detail-pane {
+    min-width: 0;
+}
+
+.employee-list-scroll {
+    max-height: min(68vh, 720px);
+    overflow: auto;
+}
+
+.employee-row {
+    cursor: pointer;
+}
+
+.employee-row.is-selected {
+    background: rgba(18, 122, 102, 0.1) !important;
+    box-shadow: inset 3px 0 0 #127A66;
+}
+
+.employee-row.is-selected .table-actions {
+    opacity: 1;
+}
+
+.employee-detail-pane {
+    position: sticky;
+    top: 1rem;
+    min-height: 420px;
+}
+
+.employee-detail-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.15rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.employee-detail-kicker {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.employee-detail-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.employee-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(110px, 38%) 1fr;
+    gap: 0.55rem 0.9rem;
+    margin: 0;
+    padding: 1.1rem 1.25rem 1.35rem;
+}
+
+.employee-detail-grid dt {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-top: 0.15rem;
+}
+
+.employee-detail-grid dd {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+@media (max-width: 991.98px) {
+    .employee-split {
+        grid-template-columns: 1fr;
+    }
+    .employee-detail-pane {
+        position: static;
+        min-height: 0;
+    }
+    .employee-list-scroll {
+        max-height: none;
+    }
+}
+
 .btn-icon {
     width: 32px;
     height: 32px;

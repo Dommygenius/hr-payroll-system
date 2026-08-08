@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load dashboard_extras %}
+{% load dashboard_extras tenant_tags %}
 
 {% block title %}{{ title }} - {{ app_name }}{% endblock %}
 
@@ -7,18 +7,18 @@
 <div class="page-hero">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% tenant_url 'dashboard' %}">Dashboard</a></li>
             <li class="breadcrumb-item active">{{ title }}</li>
         </ol>
     </nav>
     <div class="page-header">
         <div>
             <h1 class="page-title"><span class="page-title-icon"><i class="bi {{ mod.icon }}"></i></span>{{ title }}</h1>
-            <p class="page-subtitle">{{ tab_cfg.label }} — search, filter, and manage records</p>
+            <p class="page-subtitle">{% if detail_fields %}Select a record to view full details{% else %}{{ tab_cfg.label }} — search, filter, and manage records{% endif %}</p>
         </div>
         <div class="page-actions d-flex gap-2">
-            <a href="{% url 'module-tab' module=module tab=active_tab %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
-            <a href="{% url 'module-create' module=module tab=active_tab %}" class="btn btn-primary">
+            <a href="{% tenant_url 'module-tab' module=module tab=active_tab %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+            <a href="{% tenant_url 'module-create' module=module tab=active_tab %}" class="btn btn-primary">
                 <i class="bi bi-plus-lg"></i> Add New
             </a>
         </div>
@@ -46,13 +46,101 @@
         {% for t in tabs %}
         <li class="nav-item">
             <a class="nav-link {% if t.key == active_tab %}active{% endif %}"
-               href="{% url 'module-tab' module=module tab=t.key %}">{{ t.label }}</a>
+               href="{% tenant_url 'module-tab' module=module tab=t.key %}">{{ t.label }}</a>
         </li>
         {% endfor %}
     </ul>
 </div>
 {% endif %}
 
+{% if detail_fields %}
+<div class="employee-split" id="employeeSplit">
+    <div class="data-table-card employee-list-pane">
+        <div class="data-table-toolbar">
+            <h5>{{ tab_cfg.label }} <span class="record-count">{{ rows|length }}{% if total_count > page_size %} of {{ total_count }}{% endif %}</span></h5>
+            <form method="get" class="module-search-form">
+                <input type="search" name="q" placeholder="Search employees..." value="{{ search }}">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+            </form>
+        </div>
+        <div class="table-responsive employee-list-scroll">
+            <table class="table module-table mb-0">
+                <thead>
+                    <tr>
+                        {% for col in columns %}
+                        <th>{{ col.1 }}</th>
+                        {% endfor %}
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr class="employee-row" tabindex="0" data-row-id="{{ row.id }}" data-edit-url="{% tenant_url 'module-edit' module=module tab=active_tab pk=row.id %}" role="button" aria-label="View {{ row.title }}">
+                        {% for cell in row.cells %}
+                        <td>
+                            {% with idx=forloop.counter0 %}
+                            {% for c in columns %}
+                            {% if forloop.counter0 == idx %}
+                            {% if c.0|is_status_column %}{{ cell|status_badge|safe }}{% else %}{{ cell }}{% endif %}
+                            {% endif %}
+                            {% endfor %}
+                            {% endwith %}
+                        </td>
+                        {% endfor %}
+                        <td>
+                            <div class="table-actions">
+                                <a href="{% tenant_url 'module-edit' module=module tab=active_tab pk=row.id %}" class="btn-icon" title="Edit" onclick="event.stopPropagation()"><i class="bi bi-pencil"></i></a>
+                                <form method="post" action="{% tenant_url 'module-delete' module=module tab=active_tab pk=row.id %}" class="d-inline" onclick="event.stopPropagation()" onsubmit="return confirm('Delete this record permanently?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-icon btn-icon-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ columns|length|add:1 }}">
+                            <div class="empty-state">
+                                <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
+                                <h6>No employees yet</h6>
+                                <p>Add your first employee to get started.</p>
+                                <a href="{% tenant_url 'module-create' module=module tab=active_tab %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-plus-lg"></i> Add Employee
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <aside class="employee-detail-pane data-table-card" id="employeeDetailPane" aria-live="polite">
+        <div class="employee-detail-empty" id="employeeDetailEmpty">
+            <div class="empty-state py-5">
+                <div class="empty-state-icon"><i class="bi bi-person-vcard"></i></div>
+                <h6>Select an employee</h6>
+                <p class="mb-0">Click a row in the list to view their full information.</p>
+            </div>
+        </div>
+        <div class="employee-detail-body d-none" id="employeeDetailBody">
+            <div class="employee-detail-header">
+                <div>
+                    <div class="employee-detail-kicker">Employee profile</div>
+                    <h5 class="employee-detail-name mb-1" id="detailName">—</h5>
+                    <div class="text-muted small" id="detailSubtitle">—</div>
+                </div>
+                <div class="d-flex flex-column align-items-end gap-2">
+                    <span class="status-badge" id="detailStatusBadge">—</span>
+                    <a href="#" class="btn btn-sm btn-primary" id="detailEditBtn"><i class="bi bi-pencil me-1"></i>Edit</a>
+                </div>
+            </div>
+            <dl class="employee-detail-grid" id="detailGrid"></dl>
+        </div>
+    </aside>
+</div>
+{% else %}
 <div class="data-table-card">
     <div class="data-table-toolbar">
         <h5>{{ tab_cfg.label }} <span class="record-count">{{ rows|length }}{% if total_count > page_size %} of {{ total_count }}{% endif %} records</span></h5>
@@ -87,8 +175,8 @@
                     {% endfor %}
                     <td>
                         <div class="table-actions">
-                            <a href="{% url 'module-edit' module=module tab=active_tab pk=row.id %}" class="btn-icon" title="Edit"><i class="bi bi-pencil"></i></a>
-                            <form method="post" action="{% url 'module-delete' module=module tab=active_tab pk=row.id %}" class="d-inline" onsubmit="return confirm('Delete this record permanently?');">
+                            <a href="{% tenant_url 'module-edit' module=module tab=active_tab pk=row.id %}" class="btn-icon" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <form method="post" action="{% tenant_url 'module-delete' module=module tab=active_tab pk=row.id %}" class="d-inline" onsubmit="return confirm('Delete this record permanently?');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn-icon btn-icon-danger" title="Delete"><i class="bi bi-trash"></i></button>
                             </form>
@@ -102,7 +190,7 @@
                             <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
                             <h6>No records yet</h6>
                             <p>Get started by adding your first entry.</p>
-                            <a href="{% url 'module-create' module=module tab=active_tab %}" class="btn btn-primary btn-sm">
+                            <a href="{% tenant_url 'module-create' module=module tab=active_tab %}" class="btn btn-primary btn-sm">
                                 <i class="bi bi-plus-lg"></i> Add {{ tab_cfg.label|slice:":-1" }}
                             </a>
                         </div>
@@ -113,4 +201,75 @@
         </table>
     </div>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if detail_fields %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const rows = {{ rows_json|safe }};
+    const byId = Object.fromEntries(rows.map(r => [r.id, r]));
+    const empty = document.getElementById('employeeDetailEmpty');
+    const body = document.getElementById('employeeDetailBody');
+    const grid = document.getElementById('detailGrid');
+    const nameEl = document.getElementById('detailName');
+    const subtitleEl = document.getElementById('detailSubtitle');
+    const statusEl = document.getElementById('detailStatusBadge');
+    const editBtn = document.getElementById('detailEditBtn');
+
+    function statusClass(status) {
+        const s = String(status || '').toLowerCase();
+        if (['active', 'approved', 'present', 'completed'].includes(s)) return 'status-active';
+        if (['pending', 'probation', 'draft'].includes(s)) return 'status-pending';
+        if (['terminated', 'rejected', 'suspended', 'resigned'].includes(s)) return 'status-rejected';
+        return 'status-pending';
+    }
+
+    function selectRow(id) {
+        const data = byId[id];
+        if (!data) return;
+        const tr = document.querySelector('.employee-row[data-row-id="' + id + '"]');
+        document.querySelectorAll('.employee-row').forEach(el => {
+            el.classList.toggle('is-selected', el.dataset.rowId === id);
+        });
+        empty.classList.add('d-none');
+        body.classList.remove('d-none');
+        nameEl.textContent = data.title || 'Employee';
+        subtitleEl.textContent = data.subtitle && data.subtitle !== '—' ? data.subtitle : '';
+        statusEl.textContent = data.status || '—';
+        statusEl.className = 'status-badge ' + statusClass(data.status);
+        editBtn.href = tr ? tr.dataset.editUrl : '#';
+        grid.innerHTML = '';
+        (data.detail || []).forEach(item => {
+            const dt = document.createElement('dt');
+            dt.textContent = item.label;
+            const dd = document.createElement('dd');
+            if (item.is_status) {
+                dd.innerHTML = '<span class="status-badge ' + statusClass(item.value) + '">' +
+                    String(item.value).replace(/</g, '&lt;') + '</span>';
+            } else {
+                dd.textContent = item.value;
+            }
+            grid.appendChild(dt);
+            grid.appendChild(dd);
+        });
+    }
+
+    document.querySelectorAll('.employee-row').forEach(tr => {
+        tr.addEventListener('click', () => selectRow(tr.dataset.rowId));
+        tr.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                selectRow(tr.dataset.rowId);
+            }
+        });
+    });
+
+    if (rows.length) {
+        selectRow(rows[0].id);
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

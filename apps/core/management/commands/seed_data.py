@@ -130,7 +130,7 @@ class Command(BaseCommand):
             hr_user.save()
             self.stdout.write(self.style.SUCCESS('  HR Admin: hr@acme.com / Hr@12345678'))
 
-        User.objects.get_or_create(
+        manager_user, manager_created = User.objects.get_or_create(
             email='manager@acme.com',
             defaults={
                 'username': 'manager',
@@ -142,6 +142,12 @@ class Command(BaseCommand):
                 'is_staff': False,
             },
         )
+        if manager_created or not manager_user.has_usable_password():
+            manager_user.set_password('Manager@123456')
+            manager_user.role = 'manager'
+            manager_user.company = company
+            manager_user.save()
+            self.stdout.write(self.style.SUCCESS('  Manager: manager@acme.com / Manager@123456'))
 
         leave_type_defs = [
             ('ANNUAL', 'Annual Leave', 21, 'full_pay', 100, True),
