@@ -47,3 +47,7 @@ Thumbs.db
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# Jenkins CI
+jenkins_ci.sqlite3
+reports/
