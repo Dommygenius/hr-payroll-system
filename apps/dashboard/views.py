@@ -15,7 +15,8 @@ from apps.dashboard.helpers import (
     get_request_company,
     get_user_company,
     scoped_queryset,
-)from apps.dashboard.module_config import MODULES, SPECIAL_MODULES, get_module, get_tab
+)
+from apps.dashboard.module_config import MODULES, SPECIAL_MODULES, get_module, get_tab
 
 MODULE_PAGE_SIZE = 50
 
