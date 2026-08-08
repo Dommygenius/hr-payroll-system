@@ -119,7 +119,15 @@ MODULES = {
                 'model': LeaveRequest,
                 'form': F.LeaveRequestForm,
                 'select_related': ['employee', 'leave_type'],
-                'columns': [('employee', 'Employee'), ('leave_type', 'Type'), ('start_date', 'From'), ('end_date', 'To'), ('days_requested', 'Days'), ('status', 'Status')],
+                'columns': [
+                    ('employee', 'Employee'),
+                    ('leave_type', 'Type'),
+                    ('start_date', 'From'),
+                    ('end_date', 'To'),
+                    ('days_requested', 'Days'),
+                    ('reason', 'Description'),
+                    ('status', 'Status'),
+                ],
             },
             {
                 'key': 'exceptions',

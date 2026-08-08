@@ -320,6 +320,24 @@ def module_create(request, module, tab):
     })
 
 
+def _leave_approval_context(module, tab, obj):
+    """Build approval preview payload for leave request edit/approve."""
+    if module != 'leave' or tab != 'requests':
+        return None
+    from apps.leave.models import LeaveRequest
+
+    if not isinstance(obj, LeaveRequest):
+        return None
+    return {
+        'employee': str(obj.employee),
+        'leave_type': str(obj.leave_type),
+        'days': obj.days_requested,
+        'period': f'{obj.start_date} → {obj.end_date}',
+        'status': obj.status,
+        'reason': obj.reason or '',
+    }
+
+
 @login_required
 @require_http_methods(['GET', 'POST'])
 def module_edit(request, module, tab, pk):
@@ -334,11 +352,24 @@ def module_edit(request, module, tab, pk):
     form_class = tab_cfg['form']
 
     if request.method == 'POST':
-        form = form_class(request.POST, request.FILES, instance=obj, company=company)
+        post_data = request.POST.copy()
+        approve_action = post_data.get('approve_action')
+        if module == 'leave' and tab == 'requests' and approve_action in ('approve', 'reject'):
+            from apps.leave.models import LeaveRequest
+
+            post_data['status'] = (
+                LeaveRequest.Status.APPROVED if approve_action == 'approve' else LeaveRequest.Status.REJECTED
+            )
+        form = form_class(post_data, request.FILES, instance=obj, company=company)
         if form.is_valid():
             instance = form.save()
             _after_module_save(request, module, tab, instance)
-            messages.success(request, 'Record updated successfully.')
+            if approve_action == 'approve':
+                messages.success(request, 'Leave request approved.')
+            elif approve_action == 'reject':
+                messages.success(request, 'Leave request rejected.')
+            else:
+                messages.success(request, 'Record updated successfully.')
             return redirect('module-tab', module=module, tab=tab)
     else:
         form = form_class(instance=obj, company=company)
@@ -353,6 +384,7 @@ def module_edit(request, module, tab, pk):
         'form': form,
         'action': 'Edit',
         'object': obj,
+        'leave_approval': _leave_approval_context(module, tab, obj),
     })
 
 

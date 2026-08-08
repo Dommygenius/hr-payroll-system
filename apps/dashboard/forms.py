@@ -169,15 +169,35 @@ class LeaveRequestForm(CompanyModelForm):
     class Meta:
         model = LeaveRequest
         fields = [
-            'employee', 'leave_type', 'start_date', 'end_date', 'days_requested', 'reason', 'status',
-            'completion_comment', 'actual_return_date',
+            'employee', 'leave_type', 'start_date', 'end_date', 'days_requested', 'reason',
+            'status', 'rejection_reason', 'completion_comment', 'actual_return_date',
         ]
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),
             'end_date': forms.DateInput(attrs={'type': 'date'}),
             'actual_return_date': forms.DateInput(attrs={'type': 'date'}),
-            'reason': forms.Textarea(attrs={'rows': 3}),
-            'completion_comment': forms.Textarea(attrs={'rows': 2}),
+            'reason': forms.Textarea(attrs={
+                'rows': 4,
+                'placeholder': 'Describe why this leave is needed (shown during approval).',
+                'class': 'form-control',
+            }),
+            'rejection_reason': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Required when rejecting — explain the decision for the employee.',
+                'class': 'form-control',
+            }),
+            'completion_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+        }
+        labels = {
+            'reason': 'Description / Reason',
+            'rejection_reason': 'Approval notes / Rejection reason',
+            'status': 'Approval status',
+            'days_requested': 'Days requested',
+        }
+        help_texts = {
+            'reason': 'Employee explanation for this leave request. Approvers will see this.',
+            'rejection_reason': 'If rejecting, clearly describe why. Optional note when approving.',
+            'status': 'Set to Approved or Rejected to complete the approval phase.',
         }
 
     def __init__(self, *args, company=None, **kwargs):
@@ -185,6 +205,10 @@ class LeaveRequestForm(CompanyModelForm):
         if company:
             self.fields['employee'].queryset = Employee.objects.filter(company=company, is_deleted=False)
             self.fields['leave_type'].queryset = LeaveType.objects.filter(company=company, is_active=True)
+        # Highlight description during edit/approval
+        if 'reason' in self.fields:
+            self.fields['reason'].widget.attrs.setdefault('class', 'form-control')
+            self.fields['reason'].required = True
 
 
 class LeaveBalanceForm(CompanyModelForm):

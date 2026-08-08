@@ -48,6 +48,11 @@ def cell_value(obj, attr):
     val = getattr(obj, attr, '')
     if val is None:
         return '—'
+    if attr in ('reason', 'rejection_reason', 'completion_comment', 'notes', 'description'):
+        text = str(val).strip()
+        if not text:
+            return '—'
+        return text if len(text) <= 80 else text[:77] + '…'
     if hasattr(val, '__str__') and not isinstance(val, (str, int, float, bool)):
         return str(val)
     if isinstance(val, bool):

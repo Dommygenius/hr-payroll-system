@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load tenant_tags %}
 
 {% block title %}{{ action }} - {{ app_name }}{% endblock %}
 
@@ -6,8 +7,8 @@
 <div class="page-hero">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'module-tab' module=module tab=active_tab %}">{{ title }}</a></li>
+            <li class="breadcrumb-item"><a href="{% tenant_url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% tenant_url 'module-tab' module=module tab=active_tab %}">{{ title }}</a></li>
             <li class="breadcrumb-item active">{{ action }}</li>
         </ol>
     </nav>
@@ -21,6 +22,40 @@
 
 <div class="row justify-content-center">
     <div class="col-xl-8 col-lg-10">
+        {% if leave_approval %}
+        <div class="dashboard-card mb-4" style="border-left: 4px solid var(--primary);">
+            <div class="card-header"><h5 class="card-title mb-0">Approval preview</h5></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.65rem;">Employee</div>
+                        <div class="fw-semibold">{{ leave_approval.employee }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.65rem;">Leave type</div>
+                        <div class="fw-semibold">{{ leave_approval.leave_type }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.65rem;">Days</div>
+                        <div class="fw-semibold">{{ leave_approval.days }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.65rem;">Period</div>
+                        <div>{{ leave_approval.period }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted text-uppercase fw-semibold" style="letter-spacing:.04em;font-size:.65rem;">Status</div>
+                        <div><span class="status-badge status-{{ leave_approval.status }}">{{ leave_approval.status }}</span></div>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted text-uppercase fw-semibold mb-1" style="letter-spacing:.04em;font-size:.65rem;">Description / Reason</div>
+                        <div class="p-3 rounded-3" style="background: var(--primary-light); border: 1px solid var(--border-color); white-space: pre-wrap;">{{ leave_approval.reason|default:"No description provided." }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="form-card">
             <div class="form-card-header">
                 <h5><i class="bi bi-pencil-square me-2 text-primary"></i>{{ action }} {{ tab_cfg.label|slice:":-1" }}</h5>
@@ -33,7 +68,7 @@
                     {% endif %}
                     <div class="row g-3">
                         {% for field in form %}
-                        <div class="col-md-{% if field.field.widget.input_type == 'checkbox' %}12{% elif field.name in 'description,reason,notes,address,cover_letter' %}12{% else %}6{% endif %}">
+                        <div class="col-md-{% if field.field.widget.input_type == 'checkbox' %}12{% elif field.name in 'description,reason,notes,address,cover_letter,rejection_reason,completion_comment' %}12{% else %}6{% endif %}">
                             {% if field.field.widget.input_type == 'checkbox' %}
                             <div class="form-check form-switch mt-2">
                                 {{ field }}
@@ -43,13 +78,18 @@
                             <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                             {{ field }}
                             {% endif %}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
                             {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
                         </div>
                         {% endfor %}
                     </div>
-                    <div class="d-flex gap-2 mt-4 pt-4 border-top">
+                    <div class="d-flex gap-2 mt-4 pt-4 border-top flex-wrap">
                         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Save Changes</button>
-                        <a href="{% url 'module-tab' module=module tab=active_tab %}" class="btn btn-ghost">Cancel</a>
+                        {% if leave_approval %}
+                        <button type="submit" name="approve_action" value="approve" class="btn btn-success"><i class="bi bi-check2-circle me-1"></i> Approve</button>
+                        <button type="submit" name="approve_action" value="reject" class="btn btn-outline-danger"><i class="bi bi-x-circle me-1"></i> Reject</button>
+                        {% endif %}
+                        <a href="{% tenant_url 'module-tab' module=module tab=active_tab %}" class="btn btn-ghost">Cancel</a>
                     </div>
                 </form>
             </div>
