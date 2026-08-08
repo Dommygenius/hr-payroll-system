@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from apps.dashboard.helpers import apply_search, cell_value, get_user_company, scoped_queryset
+from apps.dashboard.helpers import apply_search, cell_value, get_request_company, get_user_company, scoped_queryset
 from apps.dashboard.module_config import MODULES, SPECIAL_MODULES, get_module, get_tab
 
 MODULE_PAGE_SIZE = 50
@@ -28,7 +28,7 @@ def index(request):
     from apps.payroll.models import PayrollRun
 
     today = timezone.now().date()
-    company = get_user_company(request.user)
+    company = get_request_company(request)
     cache_key = f'dash_stats:{company.pk if company else "x"}:{today}'
 
     stats = cache.get(cache_key)
@@ -114,6 +114,7 @@ def module_view(request, module, tab=None):
         tab_cfg['model'],
         extra_filter=tab_cfg.get('filter'),
         select_related=tab_cfg.get('select_related'),
+        company=get_request_company(request),
     )
     qs = apply_search(qs, search, tab_cfg.get('search_fields', []))
 
@@ -127,7 +128,7 @@ def module_view(request, module, tab=None):
 
     total_count = qs.count()
 
-    stats = _module_stats(request.user, module)
+    stats = _module_stats(request.user, module, company=get_request_company(request))
 
     context = {
         'module': module,
@@ -146,8 +147,8 @@ def module_view(request, module, tab=None):
     return render(request, 'modules/crud.html', context)
 
 
-def _module_stats(user, module):
-    company = get_user_company(user)
+def _module_stats(user, module, company=None):
+    company = company or get_user_company(user)
     stats = []
     try:
         if module == 'employees':
@@ -239,7 +240,7 @@ def clock_in_view(request):
     from apps.attendance.services import clock_in, clock_out, get_branch_settings
     from apps.employees.models import Employee
 
-    company = get_user_company(request.user)
+    company = get_request_company(request)
     employees = Employee.objects.filter(company=company, is_deleted=False) if company else Employee.objects.none()
     employee = employees.filter(email=request.user.email).first()
     settings = get_branch_settings(employee) if employee else None
@@ -292,7 +293,7 @@ def module_create(request, module, tab):
     if not mod or not tab_cfg:
         raise Http404()
 
-    company = get_user_company(request.user)
+    company = get_request_company(request)
     form_class = tab_cfg['form']
 
     if request.method == 'POST':
@@ -327,8 +328,8 @@ def module_edit(request, module, tab, pk):
     if not mod or not tab_cfg:
         raise Http404()
 
-    company = get_user_company(request.user)
-    qs = scoped_queryset(request.user, tab_cfg['model'])
+    company = get_request_company(request)
+    qs = scoped_queryset(request.user, tab_cfg['model'], company=get_request_company(request))
     obj = get_object_or_404(qs, pk=pk)
     form_class = tab_cfg['form']
 
@@ -363,7 +364,7 @@ def module_delete(request, module, tab, pk):
     if not mod or not tab_cfg:
         raise Http404()
 
-    qs = scoped_queryset(request.user, tab_cfg['model'])
+    qs = scoped_queryset(request.user, tab_cfg['model'], company=get_request_company(request))
     obj = get_object_or_404(qs, pk=pk)
 
     if tab_cfg.get('soft_delete') and hasattr(obj, 'soft_delete'):
@@ -383,7 +384,7 @@ def reports_view(request):
     from apps.payroll.models import PayrollRun, Payslip
     from apps.recruitment.models import Applicant, JobPosting
 
-    company = get_user_company(request.user)
+    company = get_request_company(request)
     today = timezone.now().date()
 
     def _filter(qs):
@@ -417,7 +418,7 @@ def ai_view(request):
     from apps.ai_features.models import AIAnalysisJob, ChatbotConversation, ChatbotMessage
     from apps.ai_features.services import HRChatbotService
 
-    company = get_user_company(request.user)
+    company = get_request_company(request)
     chat_response = None
 
     if request.method == 'POST':

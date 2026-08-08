@@ -424,50 +424,74 @@ class HRChatbotService:
 
     @staticmethod
     def _user_context(user) -> dict:
+        """Build AI context strictly scoped to the user's company (never another tenant)."""
         if not user or not getattr(user, 'is_authenticated', False):
             return {}
 
+        company = getattr(user, 'company', None)
         context = {
             'first_name': getattr(user, 'first_name', None) or user.get_username().split('@')[0],
         }
-        if getattr(user, 'company', None):
-            context['company_name'] = user.company.name
+        if company:
+            context['company_name'] = company.name
+            context['company_slug'] = company.slug
 
         try:
-            from apps.employees.models import Employee
-            from apps.leave.models import LeaveBalance, LeaveRequest
-            from apps.attendance.models import AttendanceRecord
             from datetime import timedelta
+
             from django.utils import timezone
 
-            employee = Employee.objects.filter(user=user).select_related('department').first()
+            from apps.attendance.models import AttendanceRecord
+            from apps.employees.models import Employee
+            from apps.leave.models import LeaveBalance, LeaveRequest
+
+            # Always prefer the OneToOne link, then email — but ALWAYS filter by company
+            employee_qs = Employee.objects.select_related('department', 'company')
+            if company:
+                employee_qs = employee_qs.filter(company=company)
+
+            employee = employee_qs.filter(user=user).first()
+            if not employee and company:
+                employee = employee_qs.filter(email=user.email, company=company).first()
+
             if not employee:
-                employee = Employee.objects.filter(email=user.email).select_related('department').first()
+                return context
 
-            if employee:
-                context['employee_name'] = employee.full_name
-                context['department'] = getattr(employee.department, 'name', 'Employee')
+            # Hard stop: never inject another company's employee into the prompt
+            if company and employee.company_id != company.id:
+                return context
 
-                balances = LeaveBalance.objects.filter(employee=employee).select_related('leave_type')[:5]
-                context['leave_balances'] = [
-                    {
-                        'type': b.leave_type.name,
-                        'days': float(b.available),
-                    }
-                    for b in balances
-                ]
+            context['employee_name'] = employee.full_name
+            context['department'] = getattr(employee.department, 'name', 'Employee')
 
-                context['pending_leave'] = LeaveRequest.objects.filter(
-                    employee=employee,
-                    status__in=('pending', 'submitted', 'approved'),
-                ).exclude(status='completed').count()
-
-                week_ago = timezone.now().date() - timedelta(days=7)
-                records = AttendanceRecord.objects.filter(employee=employee, date__gte=week_ago)
-                context['recent_attendance'] = {
-                    'present': records.filter(status='present').count(),
-                    'late': records.filter(status='late').count(),
+            balances = LeaveBalance.objects.filter(
+                employee=employee,
+                company=employee.company,
+            ).select_related('leave_type')[:5]
+            context['leave_balances'] = [
+                {
+                    'type': b.leave_type.name,
+                    'days': float(b.available),
                 }
+                for b in balances
+            ]
+
+            context['pending_leave'] = LeaveRequest.objects.filter(
+                employee=employee,
+                company=employee.company,
+                status__in=('pending', 'submitted', 'approved'),
+            ).exclude(status='completed').count()
+
+            week_ago = timezone.now().date() - timedelta(days=7)
+            records = AttendanceRecord.objects.filter(
+                employee=employee,
+                company=employee.company,
+                date__gte=week_ago,
+            )
+            context['recent_attendance'] = {
+                'present': records.filter(status='present').count(),
+                'late': records.filter(status='late').count(),
+            }
         except Exception as exc:
             logger.debug('Chatbot user context lookup failed: %s', exc)
 

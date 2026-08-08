@@ -6,11 +6,23 @@ def get_user_company(user):
     return getattr(user, 'company', None)
 
 
-def scoped_queryset(user, model, extra_filter=None, select_related=None):
+def get_request_company(request):
+    """Prefer the portal tenant; fall back to the authenticated user's company."""
+    tenant = getattr(request, 'tenant', None)
+    if tenant is not None:
+        return tenant
+    return get_user_company(getattr(request, 'user', None))
+
+
+def scoped_queryset(user, model, extra_filter=None, select_related=None, company=None):
+    """Company-scoped queryset. Never returns other tenants' rows when company is known."""
     qs = model.objects.all()
-    company = get_user_company(user)
+    company = company or get_user_company(user)
     if company and hasattr(model, 'company_id'):
         qs = qs.filter(company=company)
+    elif hasattr(model, 'company_id') and company is None:
+        # Unscoped users must not see all tenant data
+        qs = qs.none()
     if extra_filter:
         qs = qs.filter(**extra_filter)
     if select_related:

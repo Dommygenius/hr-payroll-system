@@ -14,6 +14,7 @@ class TenantMiddleware:
     """
     Resolve tenant from /t/<slug>/ path prefix or subdomain.
     Strips prefix so existing URL routing continues to work.
+    Enforces that authenticated users only access their own company portal.
     """
 
     PUBLIC_PATHS = (
@@ -41,8 +42,10 @@ class TenantMiddleware:
             request.tenant = tenant
             request.tenant_slug = tenant.slug
 
+        # Redirect authenticated users into their own /t/<slug>/ portal
         if (
             not request.tenant
+            and getattr(request, 'user', None) is not None
             and request.user.is_authenticated
             and not request.path.startswith('/api/')
             and not request.path.startswith('/admin/')
@@ -53,20 +56,20 @@ class TenantMiddleware:
                 from apps.core.tenant import get_portal_path
                 return redirect(get_portal_path(company.slug, request.path))
 
-        response = self.get_response(request)
-
-        if request.tenant and request.user.is_authenticated:
+        # Block cross-tenant portal access BEFORE the view runs (prevents data leaks)
+        if (
+            request.tenant
+            and getattr(request, 'user', None) is not None
+            and request.user.is_authenticated
+            and not request.user.is_superuser
+            and request.path not in self.PUBLIC_PATHS
+        ):
             user_company = getattr(request.user, 'company', None)
-            if (
-                user_company
-                and user_company.id != request.tenant.id
-                and not request.user.is_superuser
-                and request.path not in self.PUBLIC_PATHS
-            ):
+            if user_company and user_company.id != request.tenant.id:
                 from apps.core.tenant import get_portal_path
                 return redirect(get_portal_path(user_company.slug, '/dashboard/'))
 
-        return response
+        return self.get_response(request)
 
     @staticmethod
     def _should_prefix_path(path: str) -> bool:
@@ -101,5 +104,3 @@ class TenantMiddleware:
             return Company.objects.get(slug=slug, is_active=True)
         except Company.DoesNotExist:
             raise Http404('Organization not found.')
-
-

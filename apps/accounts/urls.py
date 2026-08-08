@@ -13,6 +13,23 @@ class TenantLoginView(auth_views.LoginView):
         context['auth_layout'] = True
         return context
 
+    def form_valid(self, form):
+        """Only allow users that belong to this tenant portal (or have no company yet)."""
+        from django.contrib import messages
+        from apps.core.tenant import get_portal_path
+
+        user = form.get_user()
+        tenant = getattr(self.request, 'tenant', None)
+        user_company = getattr(user, 'company', None)
+        if tenant and user_company and user_company.id != tenant.id and not user.is_superuser:
+            messages.error(
+                self.request,
+                f'This account belongs to {user_company.name}, not {tenant.name}. '
+                f'Please sign in at {get_portal_path(user_company.slug, "/accounts/login/")}.',
+            )
+            return self.form_invalid(form)
+        return super().form_valid(form)
+
     def get_success_url(self):
         from django.conf import settings
         from apps.core.tenant import get_portal_path
