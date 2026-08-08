@@ -7,16 +7,18 @@
 <div class="auth-page">
     <div class="auth-panel-brand">
         <div class="auth-panel-brand-content">
-            <div class="sidebar-brand-icon d-inline-flex mb-4"><i class="bi bi-building"></i></div>
-            <h1>{% if tenant %}{{ tenant.name }}{% else %}People operations,<br>built for scale.{% endif %}</h1>
-            <p>{% if tenant %}Sign in to your organization's HR portal.{% else %}Unified HR platform for workforce management, payroll, and talent acquisition.{% endif %}</p>
+            <div class="sidebar-brand-icon d-inline-flex mb-4"><i class="bi bi-hexagon-fill"></i></div>
+            <h1>{% if tenant %}{{ tenant.name }}{% else %}HRMS Pro{% endif %}</h1>
+            <p>{% if tenant %}Sign in to your organization's workforce portal.{% else %}A calm, modern operating system for people, payroll, and performance.{% endif %}</p>
             {% if tenant %}
             <div class="auth-features">
-                <div class="auth-feature"><i class="bi bi-link-45deg"></i> Portal: <code>/t/{{ tenant.slug }}/</code></div>
+                <div class="auth-feature"><i class="bi bi-building"></i> Portal for {{ tenant.name }} only</div>
+                <div class="auth-feature"><i class="bi bi-lock"></i> Tenant-isolated access</div>
             </div>
             {% else %}
             <div class="auth-features">
-                <div class="auth-feature"><i class="bi bi-shield-check"></i> Enterprise-grade security & audit trails</div>
+                <div class="auth-feature"><i class="bi bi-shield-check"></i> Enterprise security &amp; audit trails</div>
+                <div class="auth-feature"><i class="bi bi-graph-up-arrow"></i> Real-time workforce analytics</div>
             </div>
             {% endif %}
         </div>
@@ -24,11 +26,16 @@
     <div class="auth-panel-form">
         <div class="auth-card">
             <h2>Sign in</h2>
-            <p class="auth-subtitle">{% if tenant %}Access {{ tenant.name }} dashboard{% else %}Enter your credentials{% endif %}</p>
+            <p class="auth-subtitle">{% if tenant %}Access {{ tenant.name }}{% else %}Continue to your dashboard{% endif %}</p>
             <form method="post">
                 {% csrf_token %}
                 {% if form.errors %}
                 <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-circle me-2"></i>Invalid credentials. Please try again.</div>
+                {% endif %}
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-danger mb-3">{{ message }}</div>
+                    {% endfor %}
                 {% endif %}
                 <div class="mb-3">
                     <label class="form-label fw-semibold small text-uppercase" style="letter-spacing:0.04em;font-size:0.6875rem;">Email</label>
@@ -38,13 +45,12 @@
                     <label class="form-label fw-semibold small text-uppercase" style="letter-spacing:0.04em;font-size:0.6875rem;">Password</label>
                     <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Continue to Dashboard</button>
+                <button type="submit" class="btn btn-primary">Continue</button>
             </form>
-            {% if tenant %}
-            <div class="auth-demo-hint small">This portal belongs to <strong>{{ tenant.name }}</strong> only.</div>
-            {% else %}
+            {% if not tenant %}
             <div class="auth-demo-hint">
-                Demo: <code>admin@acme.com</code> / <code>Admin@123456</code> at <a href="/t/acme-corp/accounts/login/">/t/acme-corp/</a>
+                Demo: <code>admin@acme.com</code> / <code>Admin@123456</code><br>
+                <a href="/t/acme-corp/accounts/login/">Open Acme portal</a>
             </div>
             <p class="small text-center mt-3 mb-0"><a href="{% url 'tenant-register' %}">Register a new organization</a></p>
             {% endif %}

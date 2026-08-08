@@ -1,30 +1,30 @@
 {% extends 'base.html' %}
 
-{% block title %}HRMS Pro — Enterprise HR SaaS{% endblock %}
+{% block title %}HRMS Pro — Workforce operating system{% endblock %}
 
 {% block auth_content %}
 <div class="auth-page">
     <div class="auth-panel-brand">
         <div class="auth-panel-brand-content">
-            <div class="sidebar-brand-icon d-inline-flex mb-4"><i class="bi bi-building"></i></div>
-            <h1>Your HR platform,<br>your own portal.</h1>
-            <p>Register your organization and get a dedicated HRMS link instantly — separate tenant, separate data, ready in minutes.</p>
+            <div class="sidebar-brand-icon d-inline-flex mb-4"><i class="bi bi-hexagon-fill"></i></div>
+            <h1>HRMS Pro</h1>
+            <p>Run payroll, leave, attendance, and people ops from one calm workspace — every company gets its own private portal.</p>
             <div class="auth-features">
-                <div class="auth-feature"><i class="bi bi-link-45deg"></i> Unique link: <code>/t/your-company/</code></div>
-                <div class="auth-feature"><i class="bi bi-shield-check"></i> Isolated tenant data per organization</div>
-                <div class="auth-feature"><i class="bi bi-people-fill"></i> Payroll, leave, attendance & AI included</div>
+                <div class="auth-feature"><i class="bi bi-link-45deg"></i> Dedicated portal link for each organization</div>
+                <div class="auth-feature"><i class="bi bi-shield-check"></i> Isolated tenant data by design</div>
+                <div class="auth-feature"><i class="bi bi-people-fill"></i> Full HR stack: pay, leave, hiring &amp; AI</div>
             </div>
         </div>
     </div>
     <div class="auth-panel-form">
         <div class="auth-card">
-            <h2>Start your HR portal</h2>
-            <p class="auth-subtitle">Create your organization and admin account</p>
+            <h2>Start your portal</h2>
+            <p class="auth-subtitle">Create your organization in under a minute</p>
             <a href="{% url 'tenant-register' %}" class="btn btn-primary w-100 mb-3">Register new organization</a>
-            <p class="text-muted small mb-3">Already have a portal? Open your organization's link:</p>
-            <p class="small"><code>http://127.0.0.1:8000/t/<strong>your-company</strong>/accounts/login/</code></p>
+            <p class="text-muted small mb-2">Already onboard? Open your company link:</p>
+            <p class="small mb-3"><code>/t/your-company/accounts/login/</code></p>
             <hr>
-            <p class="small text-muted mb-0">Demo tenant: <a href="/t/acme-corp/accounts/login/">/t/acme-corp/</a></p>
+            <p class="small text-muted mb-0">Demo: <a href="/t/acme-corp/accounts/login/">Acme Corporation portal</a></p>
         </div>
     </div>
 </div>
