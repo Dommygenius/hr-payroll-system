@@ -22,7 +22,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
 
-    <link href="/static/css/hrms.css?v=8" rel="stylesheet">
+    <link href="/static/css/hrms.css?v=9" rel="stylesheet">
 
     {% block extra_css %}{% endblock %}
 
@@ -40,65 +40,47 @@
         <nav id="sidebar" class="sidebar" data-turbo-permanent>
 
             <div class="sidebar-brand">
-
-                <div class="sidebar-brand-icon"><i class="bi bi-building"></i></div>
-
+                <div class="sidebar-brand-icon"><i class="bi bi-hexagon-fill"></i></div>
                 <div class="sidebar-brand-text">
-
                     <span class="sidebar-brand-name">{% if tenant %}{{ tenant.name }}{% else %}{{ app_name }}{% endif %}</span>
-
                     <span class="sidebar-brand-tag">Workforce OS</span>
-
                 </div>
-
             </div>
 
             <div class="sidebar-nav-wrap">
-
                 <ul class="sidebar-nav" id="sidebarNav">
-
-                    <li><a href="{% tenant_url 'dashboard' %}" data-path="/" data-path-alt="/dashboard/"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a></li>
+                    <li>
+                        <a href="{% tenant_url 'dashboard' %}" data-path="/" data-path-alt="/dashboard/">
+                            <span class="nav-ico"><i class="bi bi-grid-1x2-fill"></i></span> Dashboard
+                        </a>
+                    </li>
 
                     <li class="nav-section">Core HR</li>
-
-                    <li><a href="{% tenant_url 'module' 'employees' %}" data-path="/module/employees"><i class="bi bi-people-fill"></i> Employees</a></li>
-
-                    <li><a href="{% tenant_url 'module' 'recruitment' %}" data-path="/module/recruitment"><i class="bi bi-person-plus-fill"></i> Recruitment</a></li>
-
-                    <li><a href="{% tenant_url 'module' 'leave' %}" data-path="/module/leave"><i class="bi bi-calendar2-check-fill"></i> Leave</a></li>
-
-                    <li><a href="{% tenant_url 'module' 'attendance' %}" data-path="/module/attendance"><i class="bi bi-clock-fill"></i> Attendance</a></li>
-
-                    <li><a href="{% tenant_url 'clock-in' %}" data-path="/attendance/clock-in"><i class="bi bi-geo-alt-fill"></i> Clock In</a></li>
+                    <li><a href="{% tenant_url 'module' 'employees' %}" data-path="/module/employees"><span class="nav-ico"><i class="bi bi-people-fill"></i></span> Employees</a></li>
+                    <li><a href="{% tenant_url 'module' 'recruitment' %}" data-path="/module/recruitment"><span class="nav-ico"><i class="bi bi-person-plus-fill"></i></span> Recruitment</a></li>
+                    <li><a href="{% tenant_url 'module' 'leave' %}" data-path="/module/leave"><span class="nav-ico"><i class="bi bi-calendar2-check-fill"></i></span> Leave</a></li>
+                    <li><a href="{% tenant_url 'module' 'attendance' %}" data-path="/module/attendance"><span class="nav-ico"><i class="bi bi-clock-fill"></i></span> Attendance</a></li>
+                    <li><a href="{% tenant_url 'clock-in' %}" data-path="/attendance/clock-in"><span class="nav-ico"><i class="bi bi-geo-alt-fill"></i></span> Clock In</a></li>
 
                     <li class="nav-section">Finance</li>
+                    <li><a href="{% tenant_url 'module' 'payroll' %}" data-path="/module/payroll"><span class="nav-ico"><i class="bi bi-wallet2"></i></span> Payroll</a></li>
+                    <li><a href="{% tenant_url 'module' 'casuals' %}" data-path="/module/casuals"><span class="nav-ico"><i class="bi bi-person-workspace"></i></span> Casuals</a></li>
 
-                    <li><a href="{% tenant_url 'module' 'payroll' %}" data-path="/module/payroll"><i class="bi bi-wallet2"></i> Payroll</a></li>
+                    <li class="nav-section">Growth</li>
+                    <li><a href="{% tenant_url 'module' 'performance' %}" data-path="/module/performance"><span class="nav-ico"><i class="bi bi-graph-up"></i></span> Performance</a></li>
+                    <li><a href="{% tenant_url 'module' 'surveys' %}" data-path="/module/surveys"><span class="nav-ico"><i class="bi bi-chat-square-heart-fill"></i></span> Surveys</a></li>
 
-                    <li><a href="{% tenant_url 'module' 'casuals' %}" data-path="/module/casuals"><i class="bi bi-person-workspace"></i> Casuals</a></li>
+                    <li class="nav-section">Workplace</li>
+                    <li><a href="{% tenant_url 'module' 'relations' %}" data-path="/module/relations"><span class="nav-ico"><i class="bi bi-heart-fill"></i></span> Relations</a></li>
+                    <li><a href="{% tenant_url 'module' 'disciplinary' %}" data-path="/module/disciplinary"><span class="nav-ico"><i class="bi bi-shield-fill-exclamation"></i></span> Disciplinary</a></li>
 
-                    <li class="nav-section">Development</li>
+                    <li class="nav-section">Insights</li>
+                    <li><a href="{% tenant_url 'module-reports' %}" data-path="/module/reports"><span class="nav-ico"><i class="bi bi-pie-chart-fill"></i></span> Reports</a></li>
+                    <li><a href="{% tenant_url 'module-ai' %}" data-path="/module/ai"><span class="nav-ico"><i class="bi bi-stars"></i></span> AI Assistant</a></li>
 
-                    <li><a href="{% tenant_url 'module' 'performance' %}" data-path="/module/performance"><i class="bi bi-graph-up"></i> Performance</a></li>
-
-                    <li><a href="{% tenant_url 'module' 'surveys' %}" data-path="/module/surveys"><i class="bi bi-chat-square-heart-fill"></i> Surveys</a></li>
-
-                    <li class="nav-section">Relations</li>
-
-                    <li><a href="{% tenant_url 'module' 'relations' %}" data-path="/module/relations"><i class="bi bi-heart-fill"></i> Relations</a></li>
-
-                    <li><a href="{% tenant_url 'module' 'disciplinary' %}" data-path="/module/disciplinary"><i class="bi bi-shield-fill-exclamation"></i> Disciplinary</a></li>
-
-                    <li class="nav-section">Analytics</li>
-
-                    <li><a href="{% tenant_url 'module-reports' %}" data-path="/module/reports"><i class="bi bi-pie-chart-fill"></i> Reports</a></li>
-
-                    <li><a href="{% tenant_url 'module-ai' %}" data-path="/module/ai"><i class="bi bi-stars"></i> AI Assistant</a></li>
-
-                    <li><a href="{% tenant_url 'module' 'settings' %}" data-path="/module/settings"><i class="bi bi-sliders"></i> Settings</a></li>
-
+                    <li class="sidebar-nav-divider" aria-hidden="true"></li>
+                    <li><a href="{% tenant_url 'module' 'settings' %}" data-path="/module/settings"><span class="nav-ico"><i class="bi bi-sliders"></i></span> Settings</a></li>
                 </ul>
-
             </div>
 
             <div class="sidebar-footer">
