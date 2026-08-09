@@ -48,6 +48,6 @@ Thumbs.db
 celerybeat-schedule
 celerybeat.pid
 
-# Jenkins CI
+# Jenkins CI local artifacts
 jenkins_ci.sqlite3
-reports/
+/reports/
