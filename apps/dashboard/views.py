@@ -17,6 +17,7 @@ from apps.dashboard.helpers import (
     scoped_queryset,
 )
 from apps.dashboard.module_config import MODULES, SPECIAL_MODULES, get_module, get_tab
+from apps.core.http import tenant_redirect
 
 MODULE_PAGE_SIZE = 50
 
@@ -36,6 +37,20 @@ def index(request):
 
     today = timezone.now().date()
     company = get_request_company(request)
+    if company is None and not request.user.is_superuser:
+        messages.warning(request, 'No organization is linked to your account.')
+        return render(request, 'dashboard/index.html', {
+            'stats': {
+                'total_employees': 0, 'active_employees': 0, 'on_leave_today': 0,
+                'present_today': 0, 'open_positions': 0, 'pending_applicants': 0,
+                'pending_leaves': 0, 'payroll_runs': 0,
+            },
+            'dept_breakdown_json': '[]',
+            'dept_breakdown': [],
+            'announcements': [],
+            'recent_employees': [],
+        })
+
     cache_key = f'dash_stats:{company.pk if company else "x"}:{today}'
 
     stats = cache.get(cache_key)
@@ -43,6 +58,8 @@ def index(request):
         employee_qs = Employee.objects.filter(is_deleted=False)
         if company:
             employee_qs = employee_qs.filter(company=company)
+        else:
+            employee_qs = employee_qs.none()
 
         emp_agg = employee_qs.aggregate(
             total=Count('id'),
@@ -53,6 +70,8 @@ def index(request):
             qs = model.objects.all()
             if company:
                 qs = qs.filter(company=company)
+            else:
+                qs = qs.none()
             return qs.filter(**filters).count()
 
         stats = {
@@ -76,6 +95,8 @@ def index(request):
     employee_qs = Employee.objects.filter(is_deleted=False)
     if company:
         employee_qs = employee_qs.filter(company=company)
+    else:
+        employee_qs = employee_qs.none()
 
     dept_breakdown = list(
         employee_qs.values('department__name')
@@ -86,6 +107,8 @@ def index(request):
     announcements = Announcement.objects.filter(is_active=True, publish_date__lte=timezone.now())
     if company:
         announcements = announcements.filter(company=company)
+    else:
+        announcements = announcements.none()
     announcements = announcements[:5]
 
     context = {
@@ -268,7 +291,7 @@ def clock_in_view(request):
             employee = employees.filter(pk=emp_id).first()
         if not employee:
             messages.error(request, 'No employee profile linked to your account.')
-            return redirect('clock-in')
+            return tenant_redirect(request, 'clock-in')
 
         action = request.POST.get('action', 'check_in')
         method = request.POST.get('method', 'manual')
@@ -285,7 +308,7 @@ def clock_in_view(request):
             messages.success(request, msg)
         else:
             messages.warning(request, msg)
-        return redirect('clock-in')
+        return tenant_redirect(request, 'clock-in')
 
     return render(request, 'modules/clock_in.html', {
         'employee': employee,
@@ -318,7 +341,7 @@ def module_create(request, module, tab):
             instance = form.save()
             _after_module_save(request, module, tab, instance)
             messages.success(request, f'{tab_cfg["label"]} record created successfully.')
-            return redirect('module-tab', module=module, tab=tab)
+            return tenant_redirect(request, 'module-tab', module=module, tab=tab)
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'errors': form.errors}, status=400)
     else:
@@ -386,7 +409,7 @@ def module_edit(request, module, tab, pk):
                 messages.success(request, 'Leave request rejected.')
             else:
                 messages.success(request, 'Record updated successfully.')
-            return redirect('module-tab', module=module, tab=tab)
+            return tenant_redirect(request, 'module-tab', module=module, tab=tab)
     else:
         form = form_class(instance=obj, company=company)
 
@@ -421,7 +444,7 @@ def module_delete(request, module, tab, pk):
         obj.delete()
 
     messages.success(request, 'Record deleted successfully.')
-    return redirect('module-tab', module=module, tab=tab)
+    return tenant_redirect(request, 'module-tab', module=module, tab=tab)
 
 
 @login_required
@@ -496,7 +519,7 @@ def ai_view(request):
             ChatbotConversation.objects.filter(user=request.user).update(is_active=False)
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'ok': True})
-            return redirect('module-ai')
+            return tenant_redirect(request, 'module-ai')
 
     jobs_qs = AIAnalysisJob.objects.all()
     if company:

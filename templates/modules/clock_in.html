@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load tenant_tags %}
 
 {% block title %}Clock In / Out - {{ app_name }}{% endblock %}
 
@@ -9,7 +10,7 @@
             <h1 class="page-title"><span class="page-title-icon"><i class="bi bi-geo-alt-fill"></i></span>Clock In / Out</h1>
             <p class="page-subtitle">GPS, face photo, manual, or biometric — your position is saved with each capture</p>
         </div>
-        <a href="{% url 'module-tab' module='attendance' tab='records' %}" class="btn btn-ghost btn-sm">View records</a>
+        <a href="{% tenant_url 'module-tab' module='attendance' tab='records' %}" class="btn btn-ghost btn-sm">View records</a>
     </div>
 </div>
 

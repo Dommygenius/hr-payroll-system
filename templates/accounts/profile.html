@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load tenant_tags %}
 
 {% block title %}My Profile - {{ app_name }}{% endblock %}
 
@@ -6,7 +7,7 @@
 <div class="page-hero">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% tenant_url 'dashboard' %}">Dashboard</a></li>
             <li class="breadcrumb-item active">Profile</li>
         </ol>
     </nav>
@@ -16,7 +17,7 @@
             <p class="page-subtitle">Your account details and role</p>
         </div>
         <div class="page-actions">
-            <a href="{% url 'password_change' %}" class="btn btn-ghost btn-sm"><i class="bi bi-key"></i> Change Password</a>
+            <a href="{% tenant_url 'password_change' %}" class="btn btn-ghost btn-sm"><i class="bi bi-key"></i> Change Password</a>
         </div>
     </div>
 </div>

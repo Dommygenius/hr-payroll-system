@@ -1,8 +1,9 @@
 from django.utils import timezone
-from rest_framework import serializers, status, viewsets
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import serializers
 
 from apps.ai_features.models import AIAnalysisJob, ChatbotConversation, ChatbotMessage
 from apps.ai_features.services import (
@@ -12,6 +13,8 @@ from apps.ai_features.services import (
     PayrollAnomalyService,
     ResumeScreeningService,
 )
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet
 
 
 class AIAnalysisJobSerializer(serializers.ModelSerializer):
@@ -32,28 +35,31 @@ class ChatbotMessageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class AIAnalysisJobViewSet(viewsets.ModelViewSet):
+class AIAnalysisJobViewSet(CompanyScopedModelViewSet):
     queryset = AIAnalysisJob.objects.all()
     serializer_class = AIAnalysisJobSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'job_type', 'status']
 
 
-class ChatbotConversationViewSet(viewsets.ModelViewSet):
+class ChatbotConversationViewSet(CompanyScopedModelViewSet):
     queryset = ChatbotConversation.objects.all()
     serializer_class = ChatbotConversationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['user', 'is_active']
 
     def get_queryset(self):
         return ChatbotConversation.objects.filter(user=self.request.user)
 
 
-class ChatbotMessageViewSet(viewsets.ModelViewSet):
+class ChatbotMessageViewSet(CompanyScopedModelViewSet):
     queryset = ChatbotMessage.objects.all()
     serializer_class = ChatbotMessageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['conversation', 'role']
+
+    def get_queryset(self):
+        return ChatbotMessage.objects.filter(conversation__user=self.request.user)
 
 
 class ChatbotPostMessageView(APIView):

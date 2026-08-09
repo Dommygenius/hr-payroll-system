@@ -1,5 +1,8 @@
-from rest_framework import serializers, viewsets
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
+
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet
 
 from apps.recruitment.models import Applicant, Interview, JobPosting, OfferLetter, OnboardingChecklist
 
@@ -34,39 +37,39 @@ class OnboardingChecklistSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class JobPostingViewSet(viewsets.ModelViewSet):
+class JobPostingViewSet(CompanyScopedModelViewSet):
     queryset = JobPosting.objects.all()
     serializer_class = JobPostingSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['title', 'description']
     filterset_fields = ['company', 'department', 'branch', 'status', 'employment_type', 'is_published']
 
 
-class ApplicantViewSet(viewsets.ModelViewSet):
+class ApplicantViewSet(CompanyScopedModelViewSet):
     queryset = Applicant.objects.all()
     serializer_class = ApplicantSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['first_name', 'last_name', 'email', 'phone']
     filterset_fields = ['company', 'job', 'status', 'source']
 
 
-class InterviewViewSet(viewsets.ModelViewSet):
+class InterviewViewSet(CompanyScopedModelViewSet):
     queryset = Interview.objects.all()
     serializer_class = InterviewSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'applicant', 'interviewer', 'is_completed']
 
 
-class OfferLetterViewSet(viewsets.ModelViewSet):
+class OfferLetterViewSet(CompanyScopedModelViewSet):
     queryset = OfferLetter.objects.all()
     serializer_class = OfferLetterSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'applicant', 'is_accepted']
 
 
-class OnboardingChecklistViewSet(viewsets.ModelViewSet):
+class OnboardingChecklistViewSet(CompanyScopedModelViewSet):
     queryset = OnboardingChecklist.objects.all()
     serializer_class = OnboardingChecklistSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['task', 'description']
     filterset_fields = ['company', 'employee', 'assigned_to', 'is_completed']

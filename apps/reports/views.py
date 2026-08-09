@@ -20,21 +20,27 @@ class DashboardStatsView(APIView):
 
         today = timezone.now().date()
         company = getattr(request.user, 'company', None)
+        if company is None and not request.user.is_superuser:
+            return Response({'error': 'No company assigned to this user.'}, status=403)
 
         employee_qs = Employee.objects.filter(is_deleted=False)
-        if company:
-            employee_qs = employee_qs.filter(company=company)
-
         leave_qs = LeaveRequest.objects.all()
         payroll_qs = PayrollRun.objects.all()
         job_qs = JobPosting.objects.all()
         applicant_qs = Applicant.objects.all()
 
         if company:
+            employee_qs = employee_qs.filter(company=company)
             leave_qs = leave_qs.filter(company=company)
             payroll_qs = payroll_qs.filter(company=company)
             job_qs = job_qs.filter(company=company)
             applicant_qs = applicant_qs.filter(company=company)
+        elif not request.user.is_superuser:
+            employee_qs = employee_qs.none()
+            leave_qs = leave_qs.none()
+            payroll_qs = payroll_qs.none()
+            job_qs = job_qs.none()
+            applicant_qs = applicant_qs.none()
 
         stats = {
             'employees': {

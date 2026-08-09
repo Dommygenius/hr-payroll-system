@@ -1,5 +1,8 @@
-from rest_framework import serializers, viewsets
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
+
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet
 
 from apps.surveys.models import Survey, SurveyQuestion, SurveyResponse
 
@@ -22,23 +25,23 @@ class SurveyResponseSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class SurveyViewSet(viewsets.ModelViewSet):
+class SurveyViewSet(CompanyScopedModelViewSet):
     queryset = Survey.objects.all()
     serializer_class = SurveySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['title', 'description']
     filterset_fields = ['company', 'status', 'is_anonymous']
 
 
-class SurveyQuestionViewSet(viewsets.ModelViewSet):
+class SurveyQuestionViewSet(CompanyScopedModelViewSet):
     queryset = SurveyQuestion.objects.all()
     serializer_class = SurveyQuestionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'survey', 'question_type', 'is_required']
 
 
-class SurveyResponseViewSet(viewsets.ModelViewSet):
+class SurveyResponseViewSet(CompanyScopedModelViewSet):
     queryset = SurveyResponse.objects.all()
     serializer_class = SurveyResponseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'survey', 'respondent']

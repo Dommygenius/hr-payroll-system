@@ -1,6 +1,9 @@
 """Generate standard DRF viewsets from models."""
-from rest_framework import serializers, viewsets
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
+
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet
 
 
 def create_serializer(model_class, read_only=None):
@@ -10,7 +13,10 @@ def create_serializer(model_class, read_only=None):
         class Meta:
             model = model_class
             fields = '__all__'
-            read_only_fields = [f for f in read_only if hasattr(model_class, f.replace('_id', '')) or f.endswith('_at')]
+            read_only_fields = [
+                f for f in read_only
+                if hasattr(model_class, f.replace('_id', '')) or f.endswith('_at')
+            ]
 
     DynamicSerializer.__name__ = f'{model_class.__name__}Serializer'
     return DynamicSerializer
@@ -19,10 +25,10 @@ def create_serializer(model_class, read_only=None):
 def create_viewset(model_class, search_fields=None, filterset_fields=None):
     serializer_class = create_serializer(model_class)
 
-    class DynamicViewSet(viewsets.ModelViewSet):
+    class DynamicViewSet(CompanyScopedModelViewSet):
         queryset = model_class.objects.all()
         serializer_class = serializer_class
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsCompanyMember]
         search_fields = search_fields or []
         filterset_fields = filterset_fields or []
 

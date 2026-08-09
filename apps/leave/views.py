@@ -1,5 +1,8 @@
-from rest_framework import serializers, viewsets
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
+
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet
 
 from apps.leave.models import LeaveApproval, LeaveBalance, LeaveRequest, LeaveType
 
@@ -28,30 +31,30 @@ class LeaveApprovalSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class LeaveTypeViewSet(viewsets.ModelViewSet):
+class LeaveTypeViewSet(CompanyScopedModelViewSet):
     queryset = LeaveType.objects.all()
     serializer_class = LeaveTypeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['name', 'code']
     filterset_fields = ['company', 'is_active', 'is_paid']
 
 
-class LeaveBalanceViewSet(viewsets.ModelViewSet):
+class LeaveBalanceViewSet(CompanyScopedModelViewSet):
     queryset = LeaveBalance.objects.all()
     serializer_class = LeaveBalanceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'employee', 'leave_type', 'year']
 
 
-class LeaveRequestViewSet(viewsets.ModelViewSet):
+class LeaveRequestViewSet(CompanyScopedModelViewSet):
     queryset = LeaveRequest.objects.all()
     serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'employee', 'leave_type', 'status']
 
 
-class LeaveApprovalViewSet(viewsets.ModelViewSet):
+class LeaveApprovalViewSet(CompanyScopedModelViewSet):
     queryset = LeaveApproval.objects.all()
     serializer_class = LeaveApprovalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'leave_request', 'approver', 'status']

@@ -1,5 +1,8 @@
-from rest_framework import serializers, viewsets
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
+
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet
 
 from apps.payroll.models import (
     Allowance,
@@ -54,54 +57,54 @@ class LoanSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class SalaryStructureViewSet(viewsets.ModelViewSet):
+class SalaryStructureViewSet(CompanyScopedModelViewSet):
     queryset = SalaryStructure.objects.all()
     serializer_class = SalaryStructureSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['name', 'code']
     filterset_fields = ['company', 'is_active']
 
 
-class AllowanceViewSet(viewsets.ModelViewSet):
+class AllowanceViewSet(CompanyScopedModelViewSet):
     queryset = Allowance.objects.all()
     serializer_class = AllowanceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['name', 'code']
     filterset_fields = ['company', 'is_active', 'is_taxable']
 
 
-class DeductionViewSet(viewsets.ModelViewSet):
+class DeductionViewSet(CompanyScopedModelViewSet):
     queryset = Deduction.objects.all()
     serializer_class = DeductionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['name', 'code']
     filterset_fields = ['company', 'is_active', 'is_statutory']
 
 
-class EmployeeSalaryViewSet(viewsets.ModelViewSet):
+class EmployeeSalaryViewSet(CompanyScopedModelViewSet):
     queryset = EmployeeSalary.objects.all()
     serializer_class = EmployeeSalarySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'employee', 'salary_structure']
 
 
-class PayrollRunViewSet(viewsets.ModelViewSet):
+class PayrollRunViewSet(CompanyScopedModelViewSet):
     queryset = PayrollRun.objects.all()
     serializer_class = PayrollRunSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['name']
     filterset_fields = ['company', 'status']
 
 
-class PayslipViewSet(viewsets.ModelViewSet):
+class PayslipViewSet(CompanyScopedModelViewSet):
     queryset = Payslip.objects.all()
     serializer_class = PayslipSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'payroll_run', 'employee', 'is_anomaly']
 
 
-class LoanViewSet(viewsets.ModelViewSet):
+class LoanViewSet(CompanyScopedModelViewSet):
     queryset = Loan.objects.all()
     serializer_class = LoanSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'employee', 'status']

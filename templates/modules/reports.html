@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load tenant_tags %}
 
 {% block title %}Reports & Analytics - {{ app_name }}{% endblock %}
 
@@ -6,7 +7,7 @@
 <div class="page-hero">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% tenant_url 'dashboard' %}">Dashboard</a></li>
             <li class="breadcrumb-item active">Reports & Analytics</li>
         </ol>
     </nav>
@@ -76,10 +77,10 @@
             <div class="card-header"><h5 class="card-title">Quick Reports</h5></div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-6 col-6"><a href="{% url 'module-tab' module='employees' tab='list' %}" class="report-link-card"><i class="bi bi-people-fill"></i><span>Employees</span></a></div>
-                    <div class="col-md-6 col-6"><a href="{% url 'module-tab' module='payroll' tab='payslips' %}" class="report-link-card"><i class="bi bi-cash-stack"></i><span>Payroll</span></a></div>
-                    <div class="col-md-6 col-6"><a href="{% url 'module-tab' module='leave' tab='requests' %}" class="report-link-card"><i class="bi bi-calendar-check"></i><span>Leave</span></a></div>
-                    <div class="col-md-6 col-6"><a href="{% url 'module-tab' module='attendance' tab='records' %}" class="report-link-card"><i class="bi bi-clock-history"></i><span>Attendance</span></a></div>
+                    <div class="col-md-6 col-6"><a href="{% tenant_url 'module-tab' module='employees' tab='list' %}" class="report-link-card"><i class="bi bi-people-fill"></i><span>Employees</span></a></div>
+                    <div class="col-md-6 col-6"><a href="{% tenant_url 'module-tab' module='payroll' tab='payslips' %}" class="report-link-card"><i class="bi bi-cash-stack"></i><span>Payroll</span></a></div>
+                    <div class="col-md-6 col-6"><a href="{% tenant_url 'module-tab' module='leave' tab='requests' %}" class="report-link-card"><i class="bi bi-calendar-check"></i><span>Leave</span></a></div>
+                    <div class="col-md-6 col-6"><a href="{% tenant_url 'module-tab' module='attendance' tab='records' %}" class="report-link-card"><i class="bi bi-clock-history"></i><span>Attendance</span></a></div>
                 </div>
             </div>
         </div>

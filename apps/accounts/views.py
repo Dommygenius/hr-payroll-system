@@ -14,6 +14,8 @@ from apps.accounts.serializers import (
     UserProfileUpdateSerializer,
     UserSerializer,
 )
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet, CompanyScopedReadOnlyModelViewSet
 
 User = get_user_model()
 
@@ -40,9 +42,10 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return Response(UserSerializer(request.user).data)
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(CompanyScopedModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated, IsCompanyMember]
     search_fields = ['email', 'username', 'first_name', 'last_name']
     filterset_fields = ['role', 'company', 'branch', 'is_active']
 
@@ -52,15 +55,17 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserSerializer
 
 
-class PermissionGroupViewSet(viewsets.ModelViewSet):
+class PermissionGroupViewSet(CompanyScopedModelViewSet):
     queryset = PermissionGroup.objects.all()
     serializer_class = PermissionGroupSerializer
+    permission_classes = [permissions.IsAuthenticated, IsCompanyMember]
     search_fields = ['name', 'codename']
     filterset_fields = ['company', 'is_system']
 
 
 class APITokenViewSet(viewsets.ModelViewSet):
     serializer_class = APITokenSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return APIToken.objects.filter(user=self.request.user)
@@ -72,17 +77,12 @@ class APITokenViewSet(viewsets.ModelViewSet):
         )
 
 
-class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+class AuditLogViewSet(CompanyScopedReadOnlyModelViewSet):
     queryset = AuditLog.objects.all()
     serializer_class = AuditLogSerializer
+    permission_classes = [permissions.IsAuthenticated, IsCompanyMember]
     filterset_fields = ['user', 'action', 'model_name', 'company']
     search_fields = ['object_repr', 'model_name']
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        if not self.request.user.is_superuser:
-            qs = qs.filter(company=self.request.user.company)
-        return qs
 
 
 class MFASetupView(APIView):

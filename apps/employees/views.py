@@ -1,6 +1,8 @@
-from rest_framework import serializers, viewsets
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet, CompanyScopedReadOnlyModelViewSet
 from apps.employees.models import Employee, EmployeeContract, EmployeeDocument, EmployeeHistory
 
 
@@ -31,30 +33,33 @@ class EmployeeHistorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class EmployeeViewSet(viewsets.ModelViewSet):
+class EmployeeViewSet(CompanyScopedModelViewSet):
     queryset = Employee.objects.filter(is_deleted=False)
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['first_name', 'last_name', 'employee_id', 'email']
     filterset_fields = ['company', 'branch', 'department', 'employment_status', 'employment_type']
 
 
-class EmployeeContractViewSet(viewsets.ModelViewSet):
+class EmployeeContractViewSet(CompanyScopedModelViewSet):
     queryset = EmployeeContract.objects.all()
     serializer_class = EmployeeContractSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
+    company_lookup = 'employee__company_id'
     filterset_fields = ['employee', 'is_active']
 
 
-class EmployeeDocumentViewSet(viewsets.ModelViewSet):
+class EmployeeDocumentViewSet(CompanyScopedModelViewSet):
     queryset = EmployeeDocument.objects.all()
     serializer_class = EmployeeDocumentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
+    company_lookup = 'employee__company_id'
     filterset_fields = ['employee', 'document_type']
 
 
-class EmployeeHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+class EmployeeHistoryViewSet(CompanyScopedReadOnlyModelViewSet):
     queryset = EmployeeHistory.objects.all()
     serializer_class = EmployeeHistorySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
+    company_lookup = 'employee__company_id'
     filterset_fields = ['employee', 'event_type']

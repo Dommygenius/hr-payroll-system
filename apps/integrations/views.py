@@ -1,5 +1,8 @@
-from rest_framework import serializers, viewsets
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
+
+from apps.core.permissions import IsCompanyMember
+from apps.core.viewsets import CompanyScopedModelViewSet
 
 from apps.integrations.models import IntegrationLog, IntegrationProvider, WebhookEndpoint
 
@@ -22,24 +25,24 @@ class WebhookEndpointSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class IntegrationProviderViewSet(viewsets.ModelViewSet):
+class IntegrationProviderViewSet(CompanyScopedModelViewSet):
     queryset = IntegrationProvider.objects.all()
     serializer_class = IntegrationProviderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['name', 'provider_code']
     filterset_fields = ['company', 'provider_type', 'is_active']
 
 
-class IntegrationLogViewSet(viewsets.ModelViewSet):
+class IntegrationLogViewSet(CompanyScopedModelViewSet):
     queryset = IntegrationLog.objects.all()
     serializer_class = IntegrationLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['provider', 'status', 'action']
 
 
-class WebhookEndpointViewSet(viewsets.ModelViewSet):
+class WebhookEndpointViewSet(CompanyScopedModelViewSet):
     queryset = WebhookEndpoint.objects.all()
     serializer_class = WebhookEndpointSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
     search_fields = ['name', 'url']
     filterset_fields = ['company', 'is_active']
