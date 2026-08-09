@@ -380,6 +380,11 @@ MODULES = {
                 'columns': [('email', 'Email'), ('first_name', 'First Name'), ('last_name', 'Last Name'), ('role', 'Role'), ('is_active', 'Active')],
             },
             {
+                'key': 'roles',
+                'label': 'Role Catalog',
+                'special': True,
+            },
+            {
                 'key': 'branches',
                 'label': 'Branches',
                 'model': Branch,
@@ -423,7 +428,9 @@ def get_tab(module_name, tab_key):
     mod = get_module(module_name)
     if not mod:
         return None
-    for tab in mod['tabs']:
-        if tab['key'] == tab_key:
-            return tab
+    if tab_key:
+        for tab in mod['tabs']:
+            if tab['key'] == tab_key:
+                return tab
+        return None
     return mod['tabs'][0] if mod['tabs'] else None

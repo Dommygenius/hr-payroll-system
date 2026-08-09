@@ -43,3 +43,9 @@ def can_assign_tasks(user):
 
 def can_manage_users(user):
     return user.is_superuser or _role(user) in USER_ADMIN_ROLES
+
+
+def can_configure_roles(user):
+    """Super admin may enable/disable roles for the tenant."""
+    from apps.accounts.roles import can_configure_tenant_roles
+    return can_configure_tenant_roles(user)

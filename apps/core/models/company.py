@@ -27,6 +27,11 @@ class Company(AuditableModel):
     default_language = models.CharField(max_length=10, default='en')
     fiscal_year_start_month = models.PositiveSmallIntegerField(default=1)
     is_active = models.BooleanField(default=True)
+    enabled_roles = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Role codes available for this tenant. Empty = use system defaults.',
+    )
 
     class Meta:
         verbose_name_plural = 'companies'

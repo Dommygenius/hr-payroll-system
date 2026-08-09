@@ -47,6 +47,11 @@ class TenantMiddleware:
                 raise Http404('This organization is not active.')
             request.tenant = tenant
             request.tenant_slug = tenant.slug
+            # Stash for OAuth callback (allauth returns to /accounts/... without /t/<slug>/).
+            try:
+                request.session['oauth_company_id'] = str(tenant.id)
+            except Exception:
+                pass
 
         # Redirect authenticated users into their own /t/<slug>/ portal
         if (

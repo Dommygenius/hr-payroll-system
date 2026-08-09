@@ -9,10 +9,13 @@ from apps.ai_features.models import AIAnalysisJob, ChatbotConversation, ChatbotM
 from apps.ai_features.services import (
     AttendanceAnomalyService,
     AttritionPredictionService,
+    CandidateRankingService,
     HRChatbotService,
     PayrollAnomalyService,
+    ReportGenerationService,
     ResumeScreeningService,
 )
+from apps.core.models import Company
 from apps.core.permissions import IsCompanyMember
 from apps.core.viewsets import CompanyScopedModelViewSet
 
@@ -65,9 +68,12 @@ class ChatbotMessageViewSet(CompanyScopedModelViewSet):
 class ChatbotPostMessageView(APIView):
     """POST a user message and receive an assistant response."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
 
     def post(self, request):
+        if not getattr(request.user, 'company_id', None) and not request.user.is_superuser:
+            return Response({'error': 'No company assigned to this user.'}, status=status.HTTP_403_FORBIDDEN)
+
         message = request.data.get('message', '').strip()
         if not message:
             return Response({'error': 'message is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -115,7 +121,7 @@ class ChatbotPostMessageView(APIView):
 class TriggerAIJobView(APIView):
     """Trigger an AI analysis job using the appropriate service."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyMember]
 
     def post(self, request):
         job_type = request.data.get('job_type')
@@ -129,8 +135,15 @@ class TriggerAIJobView(APIView):
             )
 
         company = getattr(request.user, 'company', None)
-        if company is None and not request.user.is_superuser:
-            return Response({'error': 'No company assigned to this user.'}, status=status.HTTP_403_FORBIDDEN)
+        if company is None and request.user.is_superuser:
+            company_id = request.data.get('company_id')
+            if company_id:
+                company = Company.objects.filter(pk=company_id, is_active=True).first()
+        if company is None:
+            return Response(
+                {'error': 'No company assigned. AI jobs require a company context.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         job = AIAnalysisJob.objects.create(
             company=company,
@@ -144,6 +157,9 @@ class TriggerAIJobView(APIView):
             AIAnalysisJob.JobType.RESUME_SCREENING: lambda: ResumeScreeningService.screen_resume(
                 input_data.get('applicant_id', ''), company=company
             ),
+            AIAnalysisJob.JobType.CANDIDATE_RANKING: lambda: CandidateRankingService.rank(
+                input_data.get('job_posting_id', ''), company=company
+            ),
             AIAnalysisJob.JobType.PAYROLL_ANOMALY: lambda: PayrollAnomalyService.detect_anomalies(
                 input_data.get('payroll_run_id', ''), company=company
             ),
@@ -154,6 +170,10 @@ class TriggerAIJobView(APIView):
                 input_data.get('employee_id', ''),
                 days=int(input_data.get('days', 30)),
                 company=company,
+            ),
+            AIAnalysisJob.JobType.REPORT_GENERATION: lambda: ReportGenerationService.generate(
+                company=company,
+                report_type=str(input_data.get('report_type') or 'workforce'),
             ),
         }
 

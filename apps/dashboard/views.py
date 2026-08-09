@@ -134,8 +134,22 @@ def module_view(request, module, tab=None):
     if not mod:
         raise Http404('Module not found')
 
-    tab_cfg = get_tab(module, tab or request.GET.get('tab'))
+    tab_key = tab or request.GET.get('tab')
+    tab_cfg = get_tab(module, tab_key) if tab_key else get_tab(module, None)
     if not tab_cfg:
+        raise Http404('Tab not found')
+
+    # Special settings: role catalog (super admin enables/disables roles for tenant)
+    if module == 'settings' and tab_cfg.get('key') == 'roles':
+        return roles_catalog_view(request)
+
+    from apps.accounts.permissions import can_manage_users
+    from django.core.exceptions import PermissionDenied
+
+    if module == 'settings' and tab_cfg.get('key') == 'users' and not can_manage_users(request.user):
+        raise PermissionDenied('Only Super Admin / HR Admin can manage users and roles.')
+
+    if tab_cfg.get('special'):
         raise Http404('Tab not found')
 
     search = request.GET.get('q', '').strip()
@@ -176,7 +190,7 @@ def module_view(request, module, tab=None):
         'title': mod['title'],
         'rows': rows,
         'rows_json': json.dumps(rows, default=str),
-        'columns': tab_cfg['columns'],
+        'columns': tab_cfg.get('columns', []),
         'detail_fields': detail_fields,
         'search': search,
         'stats': stats,
@@ -184,6 +198,54 @@ def module_view(request, module, tab=None):
         'page_size': page_size,
     }
     return render(request, 'modules/crud.html', context)
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def roles_catalog_view(request):
+    """Super Admin: enable or remove roles for this tenant's requirements."""
+    from django.contrib import messages
+    from django.core.exceptions import PermissionDenied
+
+    from apps.accounts.models import UserRole
+    from apps.accounts.permissions import can_configure_roles
+    from apps.accounts.roles import REQUIRED_ROLES, get_enabled_roles, set_enabled_roles
+    from apps.core.http import tenant_redirect
+
+    if not can_configure_roles(request.user):
+        raise PermissionDenied('Only a Super Admin can configure the tenant role catalog.')
+
+    company = get_request_company(request)
+    if company is None:
+        raise Http404('No organization linked to this account.')
+
+    mod = get_module('settings')
+    enabled = set(get_enabled_roles(company))
+
+    if request.method == 'POST':
+        selected = request.POST.getlist('enabled_roles')
+        set_enabled_roles(company, selected)
+        messages.success(request, 'Tenant role catalog updated. Assign roles under Users & Roles.')
+        return tenant_redirect(request, 'module-tab', module='settings', tab='roles')
+
+    role_options = []
+    for value, label in UserRole.choices:
+        role_options.append({
+            'value': value,
+            'label': label,
+            'enabled': value in enabled,
+            'required': value in REQUIRED_ROLES,
+        })
+
+    return render(request, 'modules/roles.html', {
+        'module': 'settings',
+        'mod': mod,
+        'tabs': mod['tabs'],
+        'active_tab': 'roles',
+        'title': mod['title'],
+        'role_options': role_options,
+        'company': company,
+    })
 
 
 def _module_stats(user, module, company=None):
@@ -327,16 +389,27 @@ def clock_in_view(request):
 @login_required
 @require_http_methods(['GET', 'POST'])
 def module_create(request, module, tab):
+    from django.core.exceptions import PermissionDenied
+
+    from apps.accounts.permissions import can_manage_users
+    from apps.dashboard.forms import UserAccountForm
+
     mod = get_module(module)
     tab_cfg = get_tab(module, tab)
-    if not mod or not tab_cfg:
+    if not mod or not tab_cfg or tab_cfg.get('special'):
         raise Http404()
+
+    if module == 'settings' and tab == 'users' and not can_manage_users(request.user):
+        raise PermissionDenied('Only Super Admin / HR Admin can manage users.')
 
     company = get_request_company(request)
     form_class = tab_cfg['form']
+    form_kwargs = {'company': company}
+    if form_class is UserAccountForm:
+        form_kwargs['request_user'] = request.user
 
     if request.method == 'POST':
-        form = form_class(request.POST, request.FILES, company=company)
+        form = form_class(request.POST, request.FILES, **form_kwargs)
         if form.is_valid():
             instance = form.save()
             _after_module_save(request, module, tab, instance)
@@ -345,7 +418,7 @@ def module_create(request, module, tab):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'errors': form.errors}, status=400)
     else:
-        form = form_class(company=company)
+        form = form_class(**form_kwargs)
 
     return render(request, 'modules/form.html', {
         'module': module,
@@ -380,15 +453,26 @@ def _leave_approval_context(module, tab, obj):
 @login_required
 @require_http_methods(['GET', 'POST'])
 def module_edit(request, module, tab, pk):
+    from django.core.exceptions import PermissionDenied
+
+    from apps.accounts.permissions import can_manage_users
+    from apps.dashboard.forms import UserAccountForm
+
     mod = get_module(module)
     tab_cfg = get_tab(module, tab)
-    if not mod or not tab_cfg:
+    if not mod or not tab_cfg or tab_cfg.get('special'):
         raise Http404()
 
+    if module == 'settings' and tab == 'users' and not can_manage_users(request.user):
+        raise PermissionDenied('Only Super Admin / HR Admin can manage users.')
+
     company = get_request_company(request)
-    qs = scoped_queryset(request.user, tab_cfg['model'], company=get_request_company(request))
+    qs = scoped_queryset(request.user, tab_cfg['model'], company=company)
     obj = get_object_or_404(qs, pk=pk)
     form_class = tab_cfg['form']
+    form_kwargs = {'company': company, 'instance': obj}
+    if form_class is UserAccountForm:
+        form_kwargs['request_user'] = request.user
 
     if request.method == 'POST':
         post_data = request.POST.copy()
@@ -399,7 +483,7 @@ def module_edit(request, module, tab, pk):
             post_data['status'] = (
                 LeaveRequest.Status.APPROVED if approve_action == 'approve' else LeaveRequest.Status.REJECTED
             )
-        form = form_class(post_data, request.FILES, instance=obj, company=company)
+        form = form_class(post_data, request.FILES, **form_kwargs)
         if form.is_valid():
             instance = form.save()
             _after_module_save(request, module, tab, instance)
@@ -411,7 +495,7 @@ def module_edit(request, module, tab, pk):
                 messages.success(request, 'Record updated successfully.')
             return tenant_redirect(request, 'module-tab', module=module, tab=tab)
     else:
-        form = form_class(instance=obj, company=company)
+        form = form_class(**form_kwargs)
 
     return render(request, 'modules/form.html', {
         'module': module,
@@ -430,10 +514,17 @@ def module_edit(request, module, tab, pk):
 @login_required
 @require_http_methods(['POST'])
 def module_delete(request, module, tab, pk):
+    from django.core.exceptions import PermissionDenied
+
+    from apps.accounts.permissions import can_manage_users
+
     mod = get_module(module)
     tab_cfg = get_tab(module, tab)
-    if not mod or not tab_cfg:
+    if not mod or not tab_cfg or tab_cfg.get('special'):
         raise Http404()
+
+    if module == 'settings' and tab == 'users' and not can_manage_users(request.user):
+        raise PermissionDenied('Only Super Admin / HR Admin can manage users.')
 
     qs = scoped_queryset(request.user, tab_cfg['model'], company=get_request_company(request))
     obj = get_object_or_404(qs, pk=pk)

@@ -41,7 +41,8 @@ class TestFrontendRoutes:
             routes.append(f'{TENANT_PREFIX}/module/{mod}/')
             for tab in cfg['tabs']:
                 routes.append(f'{TENANT_PREFIX}/module/{mod}/{tab["key"]}/')
-                routes.append(f'{TENANT_PREFIX}/module/{mod}/{tab["key"]}/create/')
+                if not tab.get('special'):
+                    routes.append(f'{TENANT_PREFIX}/module/{mod}/{tab["key"]}/create/')
 
         for path in routes:
             response = web_client.get(path)

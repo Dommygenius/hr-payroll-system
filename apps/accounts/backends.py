@@ -62,13 +62,19 @@ class LDAPBackend(ModelBackend):
             user_dn = result[0][0]
             conn.simple_bind_s(user_dn, password)
 
+            company = getattr(request, 'tenant', None) if request is not None else None
             try:
-                return User.objects.get(username=username)
+                user = User.objects.get(username=username)
+                if company and not user.company_id:
+                    user.company = company
+                    user.save(update_fields=['company'])
+                return user
             except User.DoesNotExist:
                 return User.objects.create_user(
                     username=username,
                     email=f'{username}@ldap.local',
                     password=secrets.token_urlsafe(32),
+                    company=company,
                 )
         except ImportError:
             return None

@@ -32,6 +32,14 @@ class Command(BaseCommand):
 
         self.stdout.write('Seeding HRMS data...')
 
+        # django-allauth / contrib.sites require SITE_ID=1
+        from django.contrib.sites.models import Site
+
+        Site.objects.update_or_create(
+            id=1,
+            defaults={'domain': 'localhost:8000', 'name': 'HRMS Local'},
+        )
+
         company, _ = Company.objects.get_or_create(
             slug='acme-corp',
             defaults={

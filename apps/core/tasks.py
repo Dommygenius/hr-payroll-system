@@ -11,11 +11,16 @@ def process_payroll_run(payroll_run_id):
     from apps.ai_features.services import PayrollAnomalyService
 
     try:
-        payroll_run = PayrollRun.objects.get(pk=payroll_run_id)
+        payroll_run = PayrollRun.objects.select_related('company').get(pk=payroll_run_id)
         payroll_run.status = PayrollRun.Status.PROCESSING
         payroll_run.save(update_fields=['status'])
 
-        anomalies = PayrollAnomalyService.detect_anomalies(str(payroll_run_id))
+        anomalies = PayrollAnomalyService.detect_anomalies(
+            str(payroll_run_id),
+            company=payroll_run.company,
+        )
+        if isinstance(anomalies, dict) and anomalies.get('error'):
+            raise ValueError(anomalies['error'])
         logger.info('Payroll run %s processed. Anomalies: %d', payroll_run_id, len(anomalies))
 
         payroll_run.status = PayrollRun.Status.REVIEW
@@ -28,9 +33,14 @@ def process_payroll_run(payroll_run_id):
 
 @shared_task
 def screen_applicant_resume(applicant_id):
-    """AI resume screening task."""
+    """AI resume screening task — always company-scoped."""
+    from apps.recruitment.models import Applicant
     from apps.ai_features.services import ResumeScreeningService
-    return ResumeScreeningService.screen_resume(applicant_id)
+
+    applicant = Applicant.objects.select_related('company').filter(pk=applicant_id).first()
+    if not applicant or not applicant.company_id:
+        return {'error': 'Applicant not found or missing company'}
+    return ResumeScreeningService.screen_resume(str(applicant_id), company=applicant.company)
 
 
 @shared_task

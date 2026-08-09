@@ -28,9 +28,9 @@ class ResumeScreeningService:
     def screen_resume(applicant_id: str, company=None) -> dict:
         from apps.recruitment.models import Applicant
 
-        qs = Applicant.objects.all()
-        if company is not None:
-            qs = qs.filter(company=company)
+        if company is None:
+            return {'error': 'company is required'}
+        qs = Applicant.objects.filter(company=company)
         try:
             applicant = qs.get(pk=applicant_id)
         except Applicant.DoesNotExist:
@@ -54,23 +54,56 @@ class ResumeScreeningService:
         }
 
 
+class CandidateRankingService:
+    """Rank applicants for a job posting within a company."""
+
+    @staticmethod
+    def rank(job_posting_id: str, company=None) -> dict:
+        from apps.recruitment.models import Applicant, JobPosting
+
+        if company is None:
+            return {'error': 'company is required'}
+        job = JobPosting.objects.filter(pk=job_posting_id, company=company).first()
+        if not job:
+            return {'error': 'Job posting not found'}
+        applicants = list(
+            Applicant.objects.filter(company=company, job=job).order_by('-ai_score', '-created_at')[:50]
+        )
+        ranked = []
+        for idx, applicant in enumerate(applicants, start=1):
+            score = float(applicant.ai_score or 0)
+            if score <= 0:
+                screened = ResumeScreeningService.screen_resume(str(applicant.id), company=company)
+                score = float(screened.get('score') or 0)
+            ranked.append(
+                {
+                    'rank': idx,
+                    'applicant_id': str(applicant.id),
+                    'name': str(applicant),
+                    'score': score,
+                }
+            )
+        ranked.sort(key=lambda row: row['score'], reverse=True)
+        for idx, row in enumerate(ranked, start=1):
+            row['rank'] = idx
+        return {'job_posting_id': str(job.id), 'candidates': ranked}
+
+
 class PayrollAnomalyService:
     """Detect anomalies in payroll data."""
 
     @staticmethod
-    def detect_anomalies(payroll_run_id: str, company=None) -> list:
+    def detect_anomalies(payroll_run_id: str, company=None):
         from apps.payroll.models import Payslip, PayrollRun
 
-        run_qs = PayrollRun.objects.all()
-        if company is not None:
-            run_qs = run_qs.filter(company=company)
+        if company is None:
+            return {'error': 'company is required'}
+        run_qs = PayrollRun.objects.filter(company=company)
         if not run_qs.filter(pk=payroll_run_id).exists():
             return {'error': 'Payroll run not found'}
 
         anomalies = []
-        payslips = Payslip.objects.filter(payroll_run_id=payroll_run_id)
-        if company is not None:
-            payslips = payslips.filter(company=company)
+        payslips = Payslip.objects.filter(payroll_run_id=payroll_run_id, company=company)
 
         if not payslips.exists():
             return anomalies
@@ -98,9 +131,9 @@ class AttritionPredictionService:
     def predict(employee_id: str, company=None) -> dict:
         from apps.employees.models import Employee
 
-        qs = Employee.objects.all()
-        if company is not None:
-            qs = qs.filter(company=company)
+        if company is None:
+            return {'error': 'company is required'}
+        qs = Employee.objects.filter(company=company)
         try:
             employee = qs.get(pk=employee_id)
         except Employee.DoesNotExist:
@@ -133,7 +166,7 @@ class AttendanceAnomalyService:
     """Detect attendance pattern anomalies."""
 
     @staticmethod
-    def detect(employee_id: str, days: int = 30, company=None) -> list:
+    def detect(employee_id: str, days: int = 30, company=None):
         from datetime import timedelta
 
         from django.utils import timezone
@@ -141,18 +174,16 @@ class AttendanceAnomalyService:
         from apps.attendance.models import AttendanceRecord
         from apps.employees.models import Employee
 
-        emp_qs = Employee.objects.all()
-        if company is not None:
-            emp_qs = emp_qs.filter(company=company)
+        if company is None:
+            return {'error': 'company is required'}
+        emp_qs = Employee.objects.filter(company=company)
         if not emp_qs.filter(pk=employee_id).exists():
             return {'error': 'Employee not found'}
 
         start_date = timezone.now().date() - timedelta(days=days)
         records = AttendanceRecord.objects.filter(
-            employee_id=employee_id, date__gte=start_date
+            employee_id=employee_id, date__gte=start_date, company=company
         )
-        if company is not None:
-            records = records.filter(company=company)
 
         anomalies = []
         late_count = records.filter(status='late').count()
@@ -164,6 +195,34 @@ class AttendanceAnomalyService:
             })
 
         return anomalies
+
+
+class ReportGenerationService:
+    """Company-scoped smart summary report."""
+
+    @staticmethod
+    def generate(company=None, report_type: str = 'workforce') -> dict:
+        from apps.employees.models import Employee
+        from apps.leave.models import LeaveRequest
+        from apps.payroll.models import PayrollRun
+
+        if company is None:
+            return {'error': 'company is required'}
+        active = Employee.objects.filter(company=company, employment_status='active', is_deleted=False).count()
+        pending_leave = LeaveRequest.objects.filter(company=company, status='pending').count()
+        recent_payroll = (
+            PayrollRun.objects.filter(company=company).order_by('-created_at').values('id', 'status', 'created_at')[:5]
+        )
+        return {
+            'report_type': report_type,
+            'company_id': str(company.id),
+            'active_employees': active,
+            'pending_leave_requests': pending_leave,
+            'recent_payroll_runs': [
+                {'id': str(r['id']), 'status': r['status'], 'created_at': r['created_at'].isoformat()}
+                for r in recent_payroll
+            ],
+        }
 
 
 class HRChatbotService:

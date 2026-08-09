@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load tenant_tags %}
+
+{% block title %}Role Catalog - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% tenant_url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% tenant_url 'module' 'settings' %}">System Settings</a></li>
+            <li class="breadcrumb-item active">Role Catalog</li>
+        </ol>
+    </nav>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title"><span class="page-title-icon"><i class="bi bi-shield-lock"></i></span>Role Catalog</h1>
+            <p class="page-subtitle">Enable or remove roles for {{ tenant.name|default:"your organization" }} — then assign them under Users &amp; Roles</p>
+        </div>
+    </div>
+</div>
+
+{% if tabs|length > 1 %}
+<div class="module-tabs-wrap mt-2">
+    <ul class="nav module-tabs">
+        {% for t in tabs %}
+        <li class="nav-item">
+            <a class="nav-link {% if t.key == active_tab %}active{% endif %}"
+               href="{% tenant_url 'module-tab' module=module tab=t.key %}">{{ t.label }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-10">
+        <div class="form-card">
+            <div class="form-card-header">
+                <h5><i class="bi bi-toggles2 me-2 text-primary"></i>Tenant role requirements</h5>
+            </div>
+            <div class="form-card-body">
+                <p class="text-muted small mb-4">
+                    Turn roles <strong>on</strong> to make them available when promoting users.
+                    Turn roles <strong>off</strong> to remove them from assignment for this tenant.
+                    <strong>Super Admin</strong> and <strong>Employee</strong> are always required.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        {% for role in role_options %}
+                        <div class="col-md-6">
+                            <label class="role-toggle-card {% if role.required %}is-required{% endif %}">
+                                <input type="checkbox"
+                                       name="enabled_roles"
+                                       value="{{ role.value }}"
+                                       {% if role.enabled %}checked{% endif %}
+                                       {% if role.required %}checked disabled{% endif %}>
+                                {% if role.required %}
+                                <input type="hidden" name="enabled_roles" value="{{ role.value }}">
+                                {% endif %}
+                                <span class="role-toggle-body">
+                                    <strong>{{ role.label }}</strong>
+                                    <small>{% if role.required %}Always required{% elif role.enabled %}Enabled for this tenant{% else %}Not used — enable to increase roles{% endif %}</small>
+                                </span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Save role catalog</button>
+                        <a href="{% tenant_url 'module-tab' module='settings' tab='users' %}" class="btn btn-ghost">Manage users</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.role-toggle-card {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.95rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: #fff;
+    cursor: pointer;
+    height: 100%;
+    transition: border-color .15s, box-shadow .15s;
+}
+.role-toggle-card:hover { border-color: rgba(18,122,102,.35); box-shadow: var(--shadow-xs); }
+.role-toggle-card.is-required { background: linear-gradient(180deg, #F7FBFA, #fff); }
+.role-toggle-card input { margin-top: 0.2rem; }
+.role-toggle-body { display: flex; flex-direction: column; gap: 0.15rem; }
+.role-toggle-body small { color: var(--text-muted); font-size: 0.75rem; }
+</style>
+{% endblock %}

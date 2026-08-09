@@ -51,11 +51,14 @@ def bootstrap_tenant(company_name: str, slug: str, admin_email: str, password: s
         n += 1
 
     with transaction.atomic():
+        from apps.accounts.roles import default_enabled_roles
+
         company = Company.objects.create(
             name=company_name,
             slug=slug,
             email=admin_email,
             is_active=True,
+            enabled_roles=default_enabled_roles(),
         )
         branch = Branch.objects.create(
             company=company,
@@ -85,7 +88,7 @@ def bootstrap_tenant(company_name: str, slug: str, admin_email: str, password: s
             last_name=last_name or company_name.split()[0],
             company=company,
             branch=branch,
-            role=UserRole.HR_ADMIN,
+            role=UserRole.SUPER_ADMIN,
             is_staff=True,
         )
         employee = Employee.objects.create(

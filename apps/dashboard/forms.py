@@ -569,13 +569,58 @@ class UserAccountForm(CompanyModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'username': forms.TextInput(attrs={'class': 'form-control'}),
         }
+        labels = {
+            'role': 'Role',
+        }
+        help_texts = {
+            'role': 'Promote or demote this user within roles enabled for your organization.',
+        }
 
-    def __init__(self, *args, company=None, **kwargs):
+    def __init__(self, *args, company=None, request_user=None, **kwargs):
+        self.request_user = request_user
         super().__init__(*args, company=company, **kwargs)
         if company:
             _fk_queryset(self, company, 'branch', Branch)
         if self.instance and self.instance.pk:
             self.fields['password'].help_text = 'Leave blank to keep current password.'
+
+        from apps.accounts.roles import assignable_role_choices
+        current = getattr(self.instance, 'role', None) if self.instance and self.instance.pk else None
+        actor = self.request_user
+        self.fields['role'].choices = assignable_role_choices(actor, company, current_role=current)
+
+    def clean_role(self):
+        from apps.accounts.models import User, UserRole
+        from apps.accounts.roles import can_configure_tenant_roles, get_enabled_roles
+
+        role = self.cleaned_data.get('role')
+        company = self.company or getattr(self.instance, 'company', None)
+        enabled = set(get_enabled_roles(company))
+        current = getattr(self.instance, 'role', None) if self.instance and self.instance.pk else None
+        if role not in enabled and role != current:
+            raise forms.ValidationError('That role is not enabled for this organization.')
+
+        actor = self.request_user
+        if role == UserRole.SUPER_ADMIN and actor and not can_configure_tenant_roles(actor):
+            raise forms.ValidationError('Only a Super Admin can assign the Super Admin role.')
+
+        # Prevent removing the last active super admin in the tenant
+        if (
+            self.instance and self.instance.pk
+            and current == UserRole.SUPER_ADMIN
+            and role != UserRole.SUPER_ADMIN
+            and company
+        ):
+            remaining = User.objects.filter(
+                company=company,
+                role=UserRole.SUPER_ADMIN,
+                is_active=True,
+            ).exclude(pk=self.instance.pk).count()
+            if remaining < 1:
+                raise forms.ValidationError(
+                    'Cannot demote the last Super Admin for this organization. Promote another user first.'
+                )
+        return role
 
     def clean(self):
         cleaned = super().clean()
@@ -588,7 +633,6 @@ class UserAccountForm(CompanyModelForm):
         return cleaned
 
     def save(self, commit=True):
-        from apps.accounts.models import User
         instance = super().save(commit=False)
         if self.company:
             instance.company = self.company

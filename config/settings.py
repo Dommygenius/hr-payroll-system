@@ -246,6 +246,9 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_LOGIN_METHODS = {'email', 'username'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_ADAPTER = 'apps.accounts.adapters.HrmsAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'apps.accounts.adapters.HrmsSocialAccountAdapter'
+LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
@@ -254,6 +257,7 @@ _GOOGLE_CID = env('GOOGLE_OAUTH_CLIENT_ID', default='')
 _GOOGLE_SECRET = env('GOOGLE_OAUTH_CLIENT_SECRET', default='')
 _MS_CID = env('MICROSOFT_OAUTH_CLIENT_ID', default='')
 _MS_SECRET = env('MICROSOFT_OAUTH_CLIENT_SECRET', default='')
+_MS_TENANT = env('MICROSOFT_OAUTH_TENANT', default='common')
 _GH_CID = env('GITHUB_OAUTH_CLIENT_ID', default='')
 _GH_SECRET = env('GITHUB_OAUTH_CLIENT_SECRET', default='')
 
@@ -268,6 +272,7 @@ if _MS_CID and _MS_SECRET:
     SOCIALACCOUNT_PROVIDERS['microsoft'] = {
         'APP': {'client_id': _MS_CID, 'secret': _MS_SECRET, 'key': ''},
         'SCOPE': ['User.Read'],
+        'TENANT': _MS_TENANT,
     }
 if _GH_CID and _GH_SECRET:
     SOCIALACCOUNT_PROVIDERS['github'] = {

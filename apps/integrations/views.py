@@ -11,18 +11,25 @@ class IntegrationProviderSerializer(serializers.ModelSerializer):
     class Meta:
         model = IntegrationProvider
         fields = '__all__'
+        extra_kwargs = {
+            'credentials': {'write_only': True},
+        }
 
 
 class IntegrationLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = IntegrationLog
         fields = '__all__'
+        read_only_fields = [f.name for f in IntegrationLog._meta.fields]
 
 
 class WebhookEndpointSerializer(serializers.ModelSerializer):
     class Meta:
         model = WebhookEndpoint
         fields = '__all__'
+        extra_kwargs = {
+            'secret': {'write_only': True},
+        }
 
 
 class IntegrationProviderViewSet(CompanyScopedModelViewSet):
@@ -34,10 +41,11 @@ class IntegrationProviderViewSet(CompanyScopedModelViewSet):
 
 
 class IntegrationLogViewSet(CompanyScopedModelViewSet):
-    queryset = IntegrationLog.objects.all()
+    queryset = IntegrationLog.objects.select_related('provider').all()
     serializer_class = IntegrationLogSerializer
     permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['provider', 'status', 'action']
+    company_lookup = 'provider__company_id'
 
 
 class WebhookEndpointViewSet(CompanyScopedModelViewSet):
