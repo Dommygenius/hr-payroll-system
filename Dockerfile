@@ -7,6 +7,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev gcc libjpeg-dev zlib1g-dev \
+    libldap2-dev libsasl2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements/ requirements/
