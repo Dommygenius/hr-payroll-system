@@ -20,6 +20,12 @@ class TenantMiddleware:
     PUBLIC_PATHS = (
         '/accounts/login/',
         '/accounts/logout/',
+        '/accounts/signup/',
+        '/accounts/google/',
+        '/accounts/microsoft/',
+        '/accounts/github/',
+        '/accounts/social/',
+        '/accounts/3rdparty/',
     )
 
     def __init__(self, get_response):
@@ -62,6 +68,7 @@ class TenantMiddleware:
             and getattr(request, 'user', None) is not None
             and request.user.is_authenticated
             and not request.user.is_superuser
+            and not any(request.path.startswith(p) for p in self.PUBLIC_PATHS)
             and request.path not in self.PUBLIC_PATHS
         ):
             user_company = getattr(request.user, 'company', None)

@@ -51,17 +51,24 @@ class TenantLogoutView(auth_views.LogoutView):
         return super().get_next_page()
 
 
+class TenantPasswordChangeView(auth_views.PasswordChangeView):
+    template_name = 'accounts/password_change.html'
+    form_class = PasswordChangeForm
+
+    def get_success_url(self):
+        from apps.core.tenant import get_portal_path
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return get_portal_path(tenant.slug, '/accounts/profile/')
+        company = getattr(self.request.user, 'company', None)
+        if company:
+            return get_portal_path(company.slug, '/accounts/profile/')
+        return '/accounts/profile/'
+
+
 urlpatterns = [
     path('login/', TenantLoginView.as_view(), name='login'),
     path('logout/', TenantLogoutView.as_view(), name='logout'),
     path('profile/', profile_view, name='accounts-profile'),
-    path(
-        'password-change/',
-        auth_views.PasswordChangeView.as_view(
-            template_name='accounts/password_change.html',
-            form_class=PasswordChangeForm,
-            success_url='/accounts/profile/',
-        ),
-        name='password_change',
-    ),
+    path('password-change/', TenantPasswordChangeView.as_view(), name='password_change'),
 ]

@@ -13,6 +13,8 @@ urlpatterns = [
     path('', saas_landing_view, name='saas-landing'),
     path('', include('apps.dashboard.urls')),
     path('accounts/', include('apps.accounts.urls')),
+    # allauth social + account extras (our login/logout above take precedence)
+    path('accounts/', include('allauth.urls')),
     path('api/v1/', include('config.api_urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

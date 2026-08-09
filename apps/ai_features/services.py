@@ -25,11 +25,14 @@ class ResumeScreeningService:
     """Screen and score resumes against job requirements."""
 
     @staticmethod
-    def screen_resume(applicant_id: str) -> dict:
+    def screen_resume(applicant_id: str, company=None) -> dict:
         from apps.recruitment.models import Applicant
 
+        qs = Applicant.objects.all()
+        if company is not None:
+            qs = qs.filter(company=company)
         try:
-            applicant = Applicant.objects.get(pk=applicant_id)
+            applicant = qs.get(pk=applicant_id)
         except Applicant.DoesNotExist:
             return {'error': 'Applicant not found'}
 
@@ -55,11 +58,19 @@ class PayrollAnomalyService:
     """Detect anomalies in payroll data."""
 
     @staticmethod
-    def detect_anomalies(payroll_run_id: str) -> list:
-        from apps.payroll.models import Payslip
+    def detect_anomalies(payroll_run_id: str, company=None) -> list:
+        from apps.payroll.models import Payslip, PayrollRun
+
+        run_qs = PayrollRun.objects.all()
+        if company is not None:
+            run_qs = run_qs.filter(company=company)
+        if not run_qs.filter(pk=payroll_run_id).exists():
+            return {'error': 'Payroll run not found'}
 
         anomalies = []
         payslips = Payslip.objects.filter(payroll_run_id=payroll_run_id)
+        if company is not None:
+            payslips = payslips.filter(company=company)
 
         if not payslips.exists():
             return anomalies
@@ -84,11 +95,14 @@ class AttritionPredictionService:
     """Predict employee attrition risk."""
 
     @staticmethod
-    def predict(employee_id: str) -> dict:
+    def predict(employee_id: str, company=None) -> dict:
         from apps.employees.models import Employee
 
+        qs = Employee.objects.all()
+        if company is not None:
+            qs = qs.filter(company=company)
         try:
-            employee = Employee.objects.get(pk=employee_id)
+            employee = qs.get(pk=employee_id)
         except Employee.DoesNotExist:
             return {'error': 'Employee not found'}
 
@@ -119,17 +133,26 @@ class AttendanceAnomalyService:
     """Detect attendance pattern anomalies."""
 
     @staticmethod
-    def detect(employee_id: str, days: int = 30) -> list:
+    def detect(employee_id: str, days: int = 30, company=None) -> list:
         from datetime import timedelta
 
         from django.utils import timezone
 
         from apps.attendance.models import AttendanceRecord
+        from apps.employees.models import Employee
+
+        emp_qs = Employee.objects.all()
+        if company is not None:
+            emp_qs = emp_qs.filter(company=company)
+        if not emp_qs.filter(pk=employee_id).exists():
+            return {'error': 'Employee not found'}
 
         start_date = timezone.now().date() - timedelta(days=days)
         records = AttendanceRecord.objects.filter(
             employee_id=employee_id, date__gte=start_date
         )
+        if company is not None:
+            records = records.filter(company=company)
 
         anomalies = []
         late_count = records.filter(status='late').count()

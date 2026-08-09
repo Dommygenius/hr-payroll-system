@@ -1,5 +1,6 @@
 def dashboard_context(request):
     """Global template context — notification queries cached 30s per user."""
+    from django.conf import settings
     from django.core.cache import cache
 
     context = {
@@ -7,6 +8,8 @@ def dashboard_context(request):
         'app_version': '1.0.0',
         'tenant': getattr(request, 'tenant', None),
         'tenant_slug': getattr(request, 'tenant_slug', None),
+        'oauth_enabled': getattr(settings, 'HRMS_OAUTH_ENABLED', {}),
+        'oauth_any': any(getattr(settings, 'HRMS_OAUTH_ENABLED', {}).values()),
     }
     if request.user.is_authenticated:
         context['user_theme'] = getattr(request.user, 'theme', 'light')

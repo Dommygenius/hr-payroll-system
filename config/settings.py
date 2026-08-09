@@ -249,6 +249,41 @@ ACCOUNT_EMAIL_VERIFICATION = 'optional'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# Social OAuth (enabled only when client id/secret are set in .env)
+_GOOGLE_CID = env('GOOGLE_OAUTH_CLIENT_ID', default='')
+_GOOGLE_SECRET = env('GOOGLE_OAUTH_CLIENT_SECRET', default='')
+_MS_CID = env('MICROSOFT_OAUTH_CLIENT_ID', default='')
+_MS_SECRET = env('MICROSOFT_OAUTH_CLIENT_SECRET', default='')
+_GH_CID = env('GITHUB_OAUTH_CLIENT_ID', default='')
+_GH_SECRET = env('GITHUB_OAUTH_CLIENT_SECRET', default='')
+
+SOCIALACCOUNT_PROVIDERS = {}
+if _GOOGLE_CID and _GOOGLE_SECRET:
+    SOCIALACCOUNT_PROVIDERS['google'] = {
+        'APP': {'client_id': _GOOGLE_CID, 'secret': _GOOGLE_SECRET, 'key': ''},
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    }
+if _MS_CID and _MS_SECRET:
+    SOCIALACCOUNT_PROVIDERS['microsoft'] = {
+        'APP': {'client_id': _MS_CID, 'secret': _MS_SECRET, 'key': ''},
+        'SCOPE': ['User.Read'],
+    }
+if _GH_CID and _GH_SECRET:
+    SOCIALACCOUNT_PROVIDERS['github'] = {
+        'APP': {'client_id': _GH_CID, 'secret': _GH_SECRET, 'key': ''},
+        'SCOPE': ['user:email'],
+    }
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_LOGIN_ON_GET = False
+HRMS_OAUTH_ENABLED = {
+    'google': 'google' in SOCIALACCOUNT_PROVIDERS,
+    'microsoft': 'microsoft' in SOCIALACCOUNT_PROVIDERS,
+    'github': 'github' in SOCIALACCOUNT_PROVIDERS,
+}
+
 # Security settings
 ACCOUNT_LOCKOUT_THRESHOLD = env.int('ACCOUNT_LOCKOUT_THRESHOLD', default=5)
 ACCOUNT_LOCKOUT_DURATION = env.int('ACCOUNT_LOCKOUT_DURATION_MINUTES', default=30)

@@ -117,25 +117,9 @@ class TriggerAIJobView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    JOB_HANDLERS = {
-        AIAnalysisJob.JobType.RESUME_SCREENING: lambda data: ResumeScreeningService.screen_resume(
-            data.get('applicant_id', '')
-        ),
-        AIAnalysisJob.JobType.PAYROLL_ANOMALY: lambda data: PayrollAnomalyService.detect_anomalies(
-            data.get('payroll_run_id', '')
-        ),
-        AIAnalysisJob.JobType.ATTRITION_PREDICTION: lambda data: AttritionPredictionService.predict(
-            data.get('employee_id', '')
-        ),
-        AIAnalysisJob.JobType.ATTENDANCE_ANOMALY: lambda data: AttendanceAnomalyService.detect(
-            data.get('employee_id', ''),
-            days=int(data.get('days', 30)),
-        ),
-    }
-
     def post(self, request):
         job_type = request.data.get('job_type')
-        input_data = request.data.get('input_data', {})
+        input_data = request.data.get('input_data', {}) or {}
 
         valid_types = [choice[0] for choice in AIAnalysisJob.JobType.choices]
         if job_type not in valid_types:
@@ -145,6 +129,9 @@ class TriggerAIJobView(APIView):
             )
 
         company = getattr(request.user, 'company', None)
+        if company is None and not request.user.is_superuser:
+            return Response({'error': 'No company assigned to this user.'}, status=status.HTTP_403_FORBIDDEN)
+
         job = AIAnalysisJob.objects.create(
             company=company,
             job_type=job_type,
@@ -153,7 +140,24 @@ class TriggerAIJobView(APIView):
             requested_by=request.user,
         )
 
-        handler = self.JOB_HANDLERS.get(job_type)
+        handlers = {
+            AIAnalysisJob.JobType.RESUME_SCREENING: lambda: ResumeScreeningService.screen_resume(
+                input_data.get('applicant_id', ''), company=company
+            ),
+            AIAnalysisJob.JobType.PAYROLL_ANOMALY: lambda: PayrollAnomalyService.detect_anomalies(
+                input_data.get('payroll_run_id', ''), company=company
+            ),
+            AIAnalysisJob.JobType.ATTRITION_PREDICTION: lambda: AttritionPredictionService.predict(
+                input_data.get('employee_id', ''), company=company
+            ),
+            AIAnalysisJob.JobType.ATTENDANCE_ANOMALY: lambda: AttendanceAnomalyService.detect(
+                input_data.get('employee_id', ''),
+                days=int(input_data.get('days', 30)),
+                company=company,
+            ),
+        }
+
+        handler = handlers.get(job_type)
         if not handler:
             job.status = AIAnalysisJob.Status.FAILED
             job.error_message = f'No handler implemented for job type: {job_type}'
@@ -164,7 +168,7 @@ class TriggerAIJobView(APIView):
             )
 
         try:
-            result = handler(input_data)
+            result = handler()
             if isinstance(result, dict) and result.get('error'):
                 job.status = AIAnalysisJob.Status.FAILED
                 job.error_message = result['error']
