@@ -1,8 +1,10 @@
-"""Generate a simple HRMS Pro features presentation (.pptx)."""
+"""Generate HRMS Pro presentation with live UI screenshots."""
+from pathlib import Path
+
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
 
 prs = Presentation()
@@ -12,10 +14,11 @@ prs.slide_height = Inches(7.5)
 FOREST = RGBColor(0x1B, 0x4D, 0x3E)
 TEAL = RGBColor(0x2A, 0x6F, 0x5F)
 ACCENT = RGBColor(0xC4, 0xA3, 0x5A)
-LIGHT = RGBColor(0xF5, 0xF7, 0xF6)
+LIGHT = RGBColor(0xF3, 0xF6, 0xF4)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 DARK = RGBColor(0x1A, 0x1F, 0x1E)
 MUTED = RGBColor(0x5A, 0x66, 0x62)
+SHOTS = Path(r'd:\Projects Running\HR & Payroll System\docs\presentation_shots')
 
 
 def set_run(run, size=18, bold=False, color=DARK, font='Calibri'):
@@ -46,18 +49,7 @@ def add_bar(slide, left, top, width, height, color):
     return shape
 
 
-def add_text(
-    slide,
-    left,
-    top,
-    width,
-    height,
-    text,
-    size=18,
-    bold=False,
-    color=DARK,
-    align=PP_ALIGN.LEFT,
-):
+def add_text(slide, left, top, width, height, text, size=18, bold=False, color=DARK, align=PP_ALIGN.LEFT):
     box = slide.shapes.add_textbox(left, top, width, height)
     tf = box.text_frame
     tf.word_wrap = True
@@ -69,7 +61,7 @@ def add_text(
     return box
 
 
-def add_bullets(slide, left, top, width, height, items, size=18, color=DARK, spacing=10):
+def add_bullets(slide, left, top, width, height, items, size=16, color=DARK, spacing=8):
     box = slide.shapes.add_textbox(left, top, width, height)
     tf = box.text_frame
     tf.word_wrap = True
@@ -88,440 +80,335 @@ def add_card(slide, left, top, width, height, title, lines):
     card.fill.solid()
     card.fill.fore_color.rgb = WHITE
     card.line.color.rgb = RGBColor(0xD5, 0xE0, 0xDB)
-    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, Inches(0.12), height)
+    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, Inches(0.1), height)
     bar.fill.solid()
     bar.fill.fore_color.rgb = TEAL
     bar.line.fill.background()
-    add_text(
-        slide,
-        left + Inches(0.3),
-        top + Inches(0.18),
-        width - Inches(0.4),
-        Inches(0.4),
-        title,
-        size=16,
-        bold=True,
-        color=FOREST,
-    )
-    add_bullets(
-        slide,
-        left + Inches(0.25),
-        top + Inches(0.55),
-        width - Inches(0.4),
-        height - Inches(0.7),
-        lines,
-        size=13,
-        color=MUTED,
-        spacing=6,
-    )
+    add_text(slide, left + Inches(0.25), top + Inches(0.15), width - Inches(0.35), Inches(0.35),
+             title, size=15, bold=True, color=FOREST)
+    add_bullets(slide, left + Inches(0.2), top + Inches(0.5), width - Inches(0.35), height - Inches(0.6),
+                lines, size=12, color=MUTED, spacing=5)
 
 
 def section_header(slide, title, subtitle=''):
     add_bg(slide, LIGHT)
-    add_bar(slide, 0, 0, prs.slide_width, Inches(0.08), FOREST)
-    add_bar(slide, 0, Inches(7.42), prs.slide_width, Inches(0.08), FOREST)
-    add_text(
-        slide,
-        Inches(0.7),
-        Inches(0.35),
-        Inches(11),
-        Inches(0.55),
-        title,
-        size=32,
-        bold=True,
-        color=FOREST,
-    )
+    add_bar(slide, 0, 0, prs.slide_width, Inches(0.07), FOREST)
+    add_bar(slide, 0, Inches(7.43), prs.slide_width, Inches(0.07), FOREST)
+    add_text(slide, Inches(0.55), Inches(0.22), Inches(12), Inches(0.45), title, size=28, bold=True, color=FOREST)
     if subtitle:
-        add_text(
-            slide,
-            Inches(0.7),
-            Inches(0.9),
-            Inches(11.5),
-            Inches(0.4),
-            subtitle,
-            size=16,
-            color=MUTED,
-        )
-    add_bar(slide, Inches(0.7), Inches(1.35), Inches(1.2), Inches(0.06), ACCENT)
+        add_text(slide, Inches(0.55), Inches(0.68), Inches(12), Inches(0.32), subtitle, size=14, color=MUTED)
+    add_bar(slide, Inches(0.55), Inches(1.05), Inches(1.0), Inches(0.05), ACCENT)
 
 
-# 1. Title
+def add_shot(slide, filename, left, top, width, height=None):
+    """Embed screenshot preserving aspect ratio (width-driven unless height given)."""
+    path = SHOTS / filename
+    if not path.exists():
+        return None
+    # Native shots are 1440x900
+    if height is None:
+        height = width * 900 / 1440
+    frame = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        left - Inches(0.04),
+        top - Inches(0.04),
+        width + Inches(0.08),
+        height + Inches(0.08),
+    )
+    frame.fill.solid()
+    frame.fill.fore_color.rgb = WHITE
+    frame.line.color.rgb = RGBColor(0xC8, 0xD5, 0xCF)
+    return slide.shapes.add_picture(str(path), left, top, width=width, height=height)
+
+
+def feature_slide(title, subtitle, bullets, shot_file, caption='Live product screenshot'):
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    section_header(slide, title, subtitle)
+    # Left text panel
+    panel = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.45), Inches(1.3), Inches(4.3), Inches(5.7))
+    panel.fill.solid()
+    panel.fill.fore_color.rgb = WHITE
+    panel.line.color.rgb = RGBColor(0xD5, 0xE0, 0xDB)
+    add_text(slide, Inches(0.7), Inches(1.5), Inches(3.9), Inches(0.35), 'What you can do', size=14, bold=True, color=TEAL)
+    add_bullets(slide, Inches(0.65), Inches(1.95), Inches(3.9), Inches(4.6), bullets, size=15, spacing=10)
+    # Screenshot on right
+    add_shot(slide, shot_file, Inches(5.0), Inches(1.35), Inches(7.85))
+    add_text(slide, Inches(5.0), Inches(6.4), Inches(7.85), Inches(0.3), caption, size=11, color=MUTED, align=PP_ALIGN.CENTER)
+    return slide
+
+
+# ===== 1 Title =====
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 add_bg(slide, FOREST)
-add_bar(slide, 0, Inches(5.9), prs.slide_width, Inches(1.6), TEAL)
+add_bar(slide, 0, Inches(5.85), prs.slide_width, Inches(1.65), TEAL)
+add_text(slide, Inches(0.8), Inches(1.6), Inches(11), Inches(0.4), 'HRMS PRO', size=18, bold=True, color=ACCENT)
+add_text(slide, Inches(0.8), Inches(2.1), Inches(11.5), Inches(1.1),
+         'Human Resource & Payroll System', size=36, bold=True, color=WHITE)
+add_text(slide, Inches(0.8), Inches(3.3), Inches(11), Inches(0.5),
+         'Feature tour with real product screenshots', size=20, color=RGBColor(0xC8, 0xD9, 0xD3))
+add_text(slide, Inches(0.8), Inches(6.2), Inches(11), Inches(0.4),
+         'Dashboard  ·  People  ·  Payroll  ·  Leave  ·  AI  ·  Security', size=15, color=WHITE)
+add_text(slide, Inches(0.8), Inches(6.65), Inches(11), Inches(0.3),
+         'Live UI from Acme Corporation demo tenant  |  2026', size=13, color=RGBColor(0xB0, 0xC8, 0xC0))
+
+# ===== 2 Agenda =====
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+section_header(slide, 'Agenda', 'A visual walkthrough of the full platform')
+add_bullets(slide, Inches(0.8), Inches(1.4), Inches(5.8), Inches(5.5), [
+    '1. Login & tenant portal look',
+    '2. Main dashboard overview',
+    '3. Employees & recruitment',
+    '4. Leave, attendance & payroll',
+    '5. Performance, AI & reports',
+    '6. Settings, roles & security',
+    '7. Why it matters',
+], size=20, spacing=16)
+
+# ===== 3 Login look =====
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+section_header(slide, 'Tenant Login Experience', 'Each company gets its own branded portal')
+add_shot(slide, '02_login.png', Inches(0.7), Inches(1.3), Inches(8.2))
+add_card(slide, Inches(9.2), Inches(1.5), Inches(3.6), Inches(4.8), 'Key points', [
+    'Split-screen branded login',
+    'URL: /t/company-slug/',
+    'Email or phone sign-in',
+    'Tenant data stays isolated',
+    'Optional OAuth providers',
+    'MFA-ready security',
+])
+
+# ===== 4 Dashboard hero =====
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+section_header(slide, 'Main Dashboard', 'Your daily command center')
+# Full-width dashboard shot (fit height under footer)
+add_shot(slide, '03_dashboard.png', Inches(1.5), Inches(1.2), Inches(10.3))
 add_text(
-    slide, Inches(0.9), Inches(2.0), Inches(11), Inches(0.5),
-    'HRMS PRO', size=20, bold=True, color=ACCENT,
-)
-add_text(
-    slide, Inches(0.9), Inches(2.5), Inches(11.5), Inches(1.2),
-    'Human Resource & Payroll System', size=40, bold=True, color=WHITE,
-)
-add_text(
-    slide, Inches(0.9), Inches(3.8), Inches(11), Inches(0.6),
-    'A simple walkthrough of every feature in the platform',
-    size=20, color=RGBColor(0xC8, 0xD9, 0xD3),
-)
-add_text(
-    slide, Inches(0.9), Inches(6.25), Inches(11), Inches(0.4),
-    'Multi-tenant  ·  Secure  ·  AI-assisted  ·  End-to-end HR',
-    size=16, color=WHITE,
-)
-add_text(
-    slide, Inches(0.9), Inches(6.7), Inches(11), Inches(0.35),
-    'Presentation Overview  |  2026', size=14, color=RGBColor(0xB0, 0xC8, 0xC0),
+    slide, Inches(0.7), Inches(6.85), Inches(12), Inches(0.3),
+    'Live Acme Corporation dashboard — stats, shortcuts, announcements',
+    size=12, color=MUTED, align=PP_ALIGN.CENTER,
 )
 
-# 2. Agenda
+# ===== 5 Dashboard explained =====
 slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, 'Agenda', 'What we will cover today')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(5.8), Inches(5),
-    [
-        '1.  What is HRMS Pro?',
-        '2.  Who uses it & how tenants work',
-        '3.  People modules (Employees, Recruitment, Casuals)',
-        '4.  Daily operations (Leave, Attendance, Payroll)',
-    ],
-    size=20, spacing=18,
-)
-add_bullets(
-    slide, Inches(7.0), Inches(1.7), Inches(5.5), Inches(5),
-    [
-        '5.  Growth & governance (Performance, Relations, Surveys)',
-        '6.  AI, Reports & Integrations',
-        '7.  Security, roles & settings',
-        '8.  Key benefits & closing',
-    ],
-    size=20, spacing=18,
-)
-
-# 3. What is it
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, 'What is HRMS Pro?', 'One platform for the full employee lifecycle')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(11.5), Inches(5),
-    [
-        'A complete Human Resource Management System for companies of any size',
-        'Covers hiring → onboarding → attendance → leave → payroll → performance',
-        'Each company (tenant) has its own secure workspace and data',
-        'Web dashboard for HR, managers, payroll officers, and employees',
-        'REST API ready for mobile apps and external systems',
-        'Smart AI helpers for screening, anomalies, and leave decisions',
-    ],
-    size=20, spacing=14,
-)
-
-# 4. Who uses it
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, 'Who Uses the System?', 'Role-based access — everyone sees what they need')
-roles = [
-    ('Super Admin', ['Full control', 'Enable/disable roles', 'Company settings']),
-    ('HR Admin', ['Employees & hiring', 'Leave policies', 'Org structure']),
-    ('Payroll Officer', ['Payroll runs', 'Payslips & loans', 'Compliance checks']),
-    ('Managers', ['Approve leave', 'Team performance', 'Attendance oversight']),
-    ('Employees', ['Self-service portal', 'Apply leave', 'View payslips']),
-    ('Auditor', ['Read-only access', 'Audit trails', 'Compliance review']),
+section_header(slide, 'Dashboard — What Leaders See', 'Stats, shortcuts, and activity in one place')
+cards = [
+    ('Quick actions', ['Add employee', 'Leave queue', 'Analytics']),
+    ('Live metrics', ['Headcount', 'Present / on leave', 'Open jobs & payroll']),
+    ('Navigation', ['Core HR, Finance, Growth', 'Workplace & Insights', 'Settings at bottom']),
+    ('Activity feed', ['Announcements', 'Recent updates', 'Pending approvals']),
 ]
-for i, (title, lines) in enumerate(roles):
-    r, c = divmod(i, 3)
-    left = Inches(0.7) + Inches(c * 4.1)
-    top = Inches(1.65) + Inches(r * 2.55)
-    add_card(slide, left, top, Inches(3.9), Inches(2.35), title, lines)
+for i, (t, lines) in enumerate(cards):
+    r, c = divmod(i, 2)
+    add_card(slide, Inches(0.6) + Inches(c * 6.3), Inches(1.4) + Inches(r * 2.8),
+             Inches(6.0), Inches(2.55), t, lines)
 
-# 5. Multi-tenant
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, 'Multi-Tenant by Design', 'Every company is isolated and secure')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(11.5), Inches(5),
+# ===== Feature slides with screenshots =====
+feature_slide(
+    'Employees',
+    'Central people directory',
     [
-        'Each tenant has a unique portal URL, e.g. /t/acme-corp/',
-        'Company data never mixes with another organization',
-        'Branches, departments, and designations per company',
-        'Super Admin can turn roles on/off to match that tenant’s needs',
-        'Ideal for SaaS: onboard many companies on one platform',
+        'Search and filter staff',
+        'View full employee details',
+        'Link dept, role & manager',
+        'Employment status tracking',
+        'Soft-delete keeps history',
+        'Feeds leave & payroll',
     ],
-    size=20, spacing=16,
-)
-
-# 6. Feature map
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, 'Feature Map', 'All major modules at a glance')
-modules = [
-    ('People', ['Employees', 'Recruitment', 'Casuals']),
-    ('Operations', ['Leave', 'Attendance', 'Payroll']),
-    ('Growth', ['Performance', 'Surveys', 'Feedback']),
-    ('Governance', ['Relations', 'Disciplinary', 'Roles & Settings']),
-    ('Intelligence', ['AI Assistant', 'Reports', 'Integrations']),
-]
-for i, (title, lines) in enumerate(modules):
-    left = Inches(0.55) + Inches(i * 2.5)
-    add_card(slide, left, Inches(1.8), Inches(2.35), Inches(4.8), title, lines)
-
-# 7. Employees
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '1. Employee Management', 'Your central people directory')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(6), Inches(5),
-    [
-        'Create and manage employee profiles',
-        'Track ID, contact, status, join date',
-        'Link to department, designation, branch',
-        'Assign reporting managers',
-        'Soft-delete keeps history safe',
-        'Quick search and detail panel view',
-    ],
-    size=19, spacing=12,
-)
-add_card(
-    slide, Inches(7.3), Inches(1.8), Inches(5.2), Inches(4.5), 'Why it matters',
-    [
-        'Single source of truth for staff data',
-        'Feeds leave, payroll, and performance',
-        'Supports permanent & contract types',
-        'HR can update records in seconds',
-    ],
+    '04_employees.png',
 )
 
-# 8. Recruitment
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '2. Recruitment & Onboarding', 'From job posting to hired employee')
-add_card(
-    slide, Inches(0.7), Inches(1.7), Inches(3.9), Inches(4.8), 'Job Postings',
-    ['Create open roles', 'Set department & openings', 'Track draft / open / closed', 'Closing dates & requirements'],
-)
-add_card(
-    slide, Inches(4.8), Inches(1.7), Inches(3.9), Inches(4.8), 'Applicants',
-    ['Capture candidate details', 'Link to job posting', 'AI resume score', 'Track hiring stage'],
-)
-add_card(
-    slide, Inches(8.9), Inches(1.7), Inches(3.7), Inches(4.8), 'Interviews',
-    ['Schedule interviews', 'Record ratings', 'Mark completed', 'Move to offer / hire'],
+feature_slide(
+    'Recruitment & Onboarding',
+    'Jobs → applicants → interviews',
+    [
+        'Post open roles',
+        'Track applicants per job',
+        'AI resume scoring',
+        'Schedule interviews',
+        'Rate candidates',
+        'Hire into employee records',
+    ],
+    '05_recruitment.png',
 )
 
-# 9. Leave
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '3. Leave Management', 'Apply, approve, and track time off')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(6), Inches(5),
+feature_slide(
+    'Leave Management',
+    'Apply, approve, track balances',
     [
-        'Employees submit leave with reason & dates',
-        'System checks leave balance before request',
-        'Managers / HR approve or reject with notes',
-        'Multi-level approval when required',
-        'Balances update automatically',
-        'AI can summarize pending leave for managers',
+        'Employee leave requests',
+        'Balance checks built-in',
+        'Approve / reject with notes',
+        'Multi-level approvals',
+        'Calendar visibility',
+        'AI leave summaries',
     ],
-    size=19, spacing=12,
-)
-add_card(
-    slide, Inches(7.3), Inches(1.8), Inches(5.2), Inches(4.5), 'Simple flow',
-    [
-        '1. Employee applies',
-        '2. Balance is checked',
-        '3. Supervisor reviews',
-        '4. Approve or reject',
-        '5. Calendar & balance update',
-    ],
+    '06_leave.png',
 )
 
-# 10. Attendance
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '4. Time & Attendance', 'Know who is present, late, or overtime')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(11.5), Inches(5),
+feature_slide(
+    'Time & Attendance',
+    'Presence, lateness, overtime',
     [
-        'Daily attendance records per employee',
-        'Clock-in / clock-out from the portal',
-        'Detect late arrivals and calculate overtime hours',
-        'Compare against shifts and work schedules',
-        'Supports future device sync (biometric / QR / GPS)',
-        'Attendance data feeds into payroll calculations',
+        'Daily attendance records',
+        'Portal clock-in / out',
+        'Late & overtime tracking',
+        'Exceptions & shifts',
+        'Biometric / GPS ready',
+        'Syncs into payroll',
     ],
-    size=20, spacing=14,
+    '07_attendance.png',
 )
 
-# 11. Payroll
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '5. Payroll & Compliance', 'Run payroll with confidence')
-add_card(
-    slide, Inches(0.7), Inches(1.7), Inches(3.9), Inches(4.8), 'Payroll Runs',
-    ['Create pay periods', 'Process employee pay', 'Gross → deductions → net', 'Review and approve'],
-)
-add_card(
-    slide, Inches(4.8), Inches(1.7), Inches(3.9), Inches(4.8), 'Payslips',
-    ['Per-employee payslips', 'Gross and net amounts', 'AI anomaly flags', 'Ready for download'],
-)
-add_card(
-    slide, Inches(8.9), Inches(1.7), Inches(3.7), Inches(4.8), 'Loans',
-    ['Staff loan records', 'Monthly installments', 'Status tracking', 'Auto payroll deduction'],
+feature_slide(
+    'Payroll & Compliance',
+    'Runs, payslips, and loans',
+    [
+        'Create payroll runs',
+        'Gross → net calculation',
+        'Employee payslips',
+        'AI anomaly flags',
+        'Staff loan deductions',
+        'Review & approve flow',
+    ],
+    '08_payroll.png',
 )
 
-# 12. Performance
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '6. Performance Management', 'Goals, reviews, and growth')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(11.5), Inches(5),
+feature_slide(
+    'Performance Management',
+    'Goals, tasks, and reviews',
     [
-        'Assign tasks and goals with due dates and points',
-        'Track progress and completion status',
-        'Support review cycles: self-assessment → manager review',
-        'Capture ratings and feedback over time',
-        'Helps managers coach teams with clear targets',
+        'Assign goals & tasks',
+        'Due dates and points',
+        'Track progress %',
+        'Manager review cycles',
+        'Ratings & feedback',
+        'Coach teams clearly',
     ],
-    size=20, spacing=16,
+    '09_performance.png',
 )
 
-# 13. Relations & Disciplinary
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '7. Relations & Disciplinary', 'Recognize good work and handle issues fairly')
-add_card(
-    slide, Inches(0.7), Inches(1.7), Inches(5.8), Inches(4.8), 'Employee Relations',
+feature_slide(
+    'AI Assistant',
+    'Smart help for HR & managers',
     [
-        'Record awards and recognition',
-        'Track employee relations cases',
-        'Build a positive workplace culture',
-        'Keep history linked to the employee',
+        'Resume screening scores',
+        'Payroll anomaly detection',
+        'Attendance checks',
+        'Summarize pending leave',
+        'Draft approve/reject notes',
+        'Company-scoped chat only',
     ],
-)
-add_card(
-    slide, Inches(6.8), Inches(1.7), Inches(5.8), Inches(4.8), 'Disciplinary',
-    [
-        'Log incidents and investigations',
-        'Warnings, hearings, outcomes',
-        'Clear severity-based process',
-        'Protects both company and staff',
-    ],
+    '10_ai.png',
 )
 
-# 14. Casuals & Surveys
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '8. Casuals & Surveys', 'Flexible workers and honest feedback')
-add_card(
-    slide, Inches(0.7), Inches(1.7), Inches(5.8), Inches(4.8), 'Casuals Management',
+feature_slide(
+    'Reports & Insights',
+    'See the big picture fast',
     [
-        'Manage temporary / casual workers',
-        'Separate from permanent payroll staff',
-        'Supervisor oversight for casual teams',
-        'Useful for seasonal or project work',
+        'Workforce analytics',
+        'Leave & payroll reports',
+        'Operational visibility',
+        'Export-ready views',
+        'Support leadership decisions',
     ],
-)
-add_card(
-    slide, Inches(6.8), Inches(1.7), Inches(5.8), Inches(4.8), 'Feedback & Surveys',
-    [
-        'Create company surveys',
-        'Anonymous options for honesty',
-        'Set start and end dates',
-        'Collect staff sentiment easily',
-    ],
+    '11_reports.png',
 )
 
-# 15. AI
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '9. AI Features', 'Smart helpers that save HR and managers time')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(11.5), Inches(5),
+feature_slide(
+    'System Settings',
+    'Users, org structure, preferences',
     [
-        'Resume screening & candidate scoring in recruitment',
-        'Payroll anomaly detection (unusual payslips flagged)',
-        'Attendance anomaly checks',
-        'Leave duty assistant: summarize pending leave',
-        'Draft approve / reject notes for managers',
-        'AI chat insights scoped safely to your company only',
+        'Manage users & roles',
+        'Branches & departments',
+        'Job designations',
+        'Company profile',
+        'Operational preferences',
     ],
-    size=20, spacing=14,
+    '12_settings.png',
 )
 
-# 16. Reports & Integrations
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '10. Reports & Integrations', 'See the big picture and connect systems')
-add_card(
-    slide, Inches(0.7), Inches(1.7), Inches(5.8), Inches(4.8), 'Reports & Insights',
+feature_slide(
+    'Role Catalog (Super Admin)',
+    'Enable or remove roles per tenant',
     [
-        'Dashboard overview of key HR metrics',
-        'Module reports for leave, payroll, people',
-        'Export-ready operational visibility',
-        'Helps leaders make faster decisions',
+        'Turn roles on/off by need',
+        'Super Admin + Employee required',
+        'Promote / demote users safely',
+        'Blocks removing last Super Admin',
+        'Fits each company’s structure',
     ],
-)
-add_card(
-    slide, Inches(6.8), Inches(1.7), Inches(5.8), Inches(4.8), 'Integrations',
-    [
-        'REST API for external apps',
-        'OAuth login (Google / Microsoft / GitHub)',
-        'Background jobs via Celery',
-        'Ready for biometrics & payroll banks',
-    ],
+    '13_roles.png',
 )
 
-# 17. Security
+# Relations / Casuals / Surveys (text cards — no dedicated shot needed)
 slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '11. Security & Access Control', 'Enterprise-ready protection')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(11.5), Inches(5),
-    [
-        'Secure login with email or phone',
-        'Optional MFA (one-time codes)',
-        'Account lockout after failed attempts',
-        'Role-Based Access Control (RBAC)',
-        'Tenant isolation — no cross-company data leaks',
-        'Audit logs track important actions',
-        'Super Admin can customize which roles a tenant uses',
-    ],
-    size=19, spacing=12,
-)
+section_header(slide, 'Also Included', 'Relations, disciplinary, casuals & surveys')
+add_card(slide, Inches(0.55), Inches(1.4), Inches(4.0), Inches(5.4), 'Relations & Awards', [
+    'Recognize good work',
+    'Track relations cases',
+    'Linked to employee history',
+])
+add_card(slide, Inches(4.7), Inches(1.4), Inches(4.0), Inches(5.4), 'Disciplinary', [
+    'Log incidents',
+    'Investigations & hearings',
+    'Warnings to dismissal',
+    'Fair, auditable process',
+])
+add_card(slide, Inches(8.85), Inches(1.4), Inches(4.0), Inches(5.4), 'Casuals & Surveys', [
+    'Temporary worker management',
+    'Supervisor oversight',
+    'Anonymous staff surveys',
+    'Sentiment over time',
+])
 
-# 18. Settings
+# Security
 slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, '12. System Settings', 'Configure the tenant to match your organization')
-add_bullets(
-    slide, Inches(0.9), Inches(1.7), Inches(11.5), Inches(5),
-    [
-        'Manage users and assign roles',
-        'Role Catalog: enable or remove roles per tenant needs',
-        'Organize branches, departments, and job titles',
-        'Company profile and operational preferences',
-        'Keep structure clean as the business grows',
-    ],
-    size=20, spacing=16,
-)
+section_header(slide, 'Security & Multi-Tenant', 'Enterprise protection built in')
+add_bullets(slide, Inches(0.8), Inches(1.4), Inches(11.5), Inches(5.5), [
+    'Secure login (email / phone) with optional MFA',
+    'Account lockout after failed attempts',
+    'Role-Based Access Control for every module',
+    'Strict tenant isolation — companies never share data',
+    'Audit logs for important actions',
+    'REST API + OAuth for modern integrations',
+], size=20, spacing=14)
 
-# 19. Benefits
+# Benefits
 slide = prs.slides.add_slide(prs.slide_layouts[6])
-section_header(slide, 'Why HRMS Pro?', 'Clear business value')
+section_header(slide, 'Why HRMS Pro?', 'Clear value for the business')
 benefits = [
-    ('One system', ['No more scattered Excel files and tools']),
-    ('Faster HR', ['Hire, approve leave, and run payroll quicker']),
-    ('Fewer errors', ['Balances, deductions, and AI checks']),
-    ('Better control', ['Roles, tenants, and audit trails']),
-    ('Scalable', ['Works for one company or many']),
-    ('Future-ready', ['API + AI + integrations']),
+    ('One system', ['Replace scattered Excel tools']),
+    ('Faster HR', ['Hire, leave & payroll quicker']),
+    ('Fewer errors', ['Balances + AI checks']),
+    ('Strong control', ['Roles, tenants, audit']),
+    ('Scalable SaaS', ['One company or many']),
+    ('Modern UI', ['Clean dashboard people use']),
 ]
 for i, (t, d) in enumerate(benefits):
     r, c = divmod(i, 3)
-    left = Inches(0.7) + Inches(c * 4.1)
-    top = Inches(1.7) + Inches(r * 2.5)
-    add_card(slide, left, top, Inches(3.9), Inches(2.25), t, d)
+    add_card(slide, Inches(0.55) + Inches(c * 4.2), Inches(1.4) + Inches(r * 2.7),
+             Inches(4.0), Inches(2.45), t, d)
 
-# 20. Closing
+# Closing
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 add_bg(slide, FOREST)
-add_bar(slide, 0, Inches(5.9), prs.slide_width, Inches(1.6), TEAL)
-add_text(
-    slide, Inches(0.9), Inches(2.2), Inches(11.5), Inches(1),
-    'Thank You', size=44, bold=True, color=WHITE,
-)
-add_text(
-    slide, Inches(0.9), Inches(3.4), Inches(11.5), Inches(0.7),
-    'Questions? Let’s walk through a live demo.',
-    size=22, color=RGBColor(0xC8, 0xD9, 0xD3),
-)
-add_text(
-    slide, Inches(0.9), Inches(6.3), Inches(11.5), Inches(0.5),
-    'HRMS Pro  ·  Human Resource & Payroll System', size=16, color=WHITE,
-)
+add_bar(slide, 0, Inches(5.85), prs.slide_width, Inches(1.65), TEAL)
+add_text(slide, Inches(0.8), Inches(2.2), Inches(11.5), Inches(0.9),
+         'Thank You', size=44, bold=True, color=WHITE)
+add_text(slide, Inches(0.8), Inches(3.3), Inches(11.5), Inches(0.6),
+         'Questions? We can open a live demo next.', size=22, color=RGBColor(0xC8, 0xD9, 0xD3))
+add_text(slide, Inches(0.8), Inches(6.25), Inches(11.5), Inches(0.4),
+         'HRMS Pro  ·  Screenshots from live Acme Corporation tenant', size=15, color=WHITE)
 
-out = r'd:\Projects Running\HR & Payroll System\docs\HRMS-Pro-Features-Presentation.pptx'
-prs.save(out)
+out = Path(r'd:\Projects Running\HR & Payroll System\docs\HRMS-Pro-Features-Presentation-v2.pptx')
+prs.save(str(out))
+# Also try overwriting original if unlocked
+legacy = Path(r'd:\Projects Running\HR & Payroll System\docs\HRMS-Pro-Features-Presentation.pptx')
+try:
+    prs.save(str(legacy))
+    print('Also updated:', legacy.name)
+except PermissionError:
+    print('Original PPTX is open — saved as v2 only. Close PowerPoint and re-run to replace.')
 print('Saved:', out)
 print('Slides:', len(prs.slides))
+print('Size KB:', round(out.stat().st_size / 1024))
