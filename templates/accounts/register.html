@@ -15,7 +15,7 @@
         <div class="auth-card" style="max-width:480px;">
             <h2>Organization signup</h2>
             <p class="auth-subtitle">Set up company + admin account</p>
-            <form method="post" novalidate>
+            <form method="post" novalidate data-turbo="false">
                 {% csrf_token %}
                 {% if form.non_field_errors %}
                 <div class="alert alert-danger">{{ form.non_field_errors }}</div>

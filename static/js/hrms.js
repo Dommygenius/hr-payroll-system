@@ -95,6 +95,19 @@ function initPageScripts() {
     if (typeof window.initPageCharts === 'function') window.initPageCharts();
 }
 
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content) return meta.content;
+    const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+document.addEventListener('turbo:before-fetch-request', function(event) {
+    const token = getCsrfToken();
+    if (!token) return;
+    event.detail.fetchOptions.headers['X-CSRFToken'] = token;
+});
+
 document.addEventListener('DOMContentLoaded', initHRMS);
 document.addEventListener('turbo:load', initHRMS);
 document.addEventListener('turbo:render', updateSidebarActive);

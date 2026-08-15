@@ -28,7 +28,11 @@ class TenantLoginView(auth_views.LoginView):
                 f'Please sign in at {get_portal_path(user_company.slug, "/accounts/login/")}.',
             )
             return self.form_invalid(form)
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        # 303 prevents Turbo/browsers from re-POSTing login with a rotated CSRF token
+        if getattr(response, 'status_code', None) == 302:
+            response.status_code = 303
+        return response
 
     def get_success_url(self):
         from django.conf import settings
