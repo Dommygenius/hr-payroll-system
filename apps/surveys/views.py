@@ -23,6 +23,14 @@ class SurveyResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyResponse
         fields = '__all__'
+        read_only_fields = ['company']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        survey = getattr(instance, 'survey', None)
+        if survey and getattr(survey, 'is_anonymous', False):
+            data['respondent'] = None
+        return data
 
 
 class SurveyViewSet(CompanyScopedModelViewSet):
@@ -45,3 +53,9 @@ class SurveyResponseViewSet(CompanyScopedModelViewSet):
     serializer_class = SurveyResponseSerializer
     permission_classes = [IsAuthenticated, IsCompanyMember]
     filterset_fields = ['company', 'survey', 'respondent']
+
+    def perform_create(self, serializer):
+        survey = serializer.validated_data.get('survey')
+        extra = self._tenant_stamp(serializer)
+        extra['respondent'] = None if (survey and getattr(survey, 'is_anonymous', False)) else self.request.user
+        serializer.save(**extra)

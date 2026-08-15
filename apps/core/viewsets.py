@@ -53,16 +53,22 @@ class CompanyScopedMixin:
 
         return qs.none()
 
-    def perform_create(self, serializer):
-        """Always stamp company from the authenticated user when the model is scoped."""
+    def _tenant_stamp(self, serializer):
         extra = {}
         user = self.request.user
         company_id = getattr(user, 'company_id', None)
         model = getattr(getattr(serializer, 'Meta', None), 'model', None)
         if company_id and model is not None and hasattr(model, 'company_id'):
-            # Prevent clients from writing into another tenant
             extra['company_id'] = company_id
-        serializer.save(**extra)
+        return extra
+
+    def perform_create(self, serializer):
+        """Always stamp company from the authenticated user when the model is scoped."""
+        serializer.save(**self._tenant_stamp(serializer))
+
+    def perform_update(self, serializer):
+        """Never allow clients to move a row into another tenant."""
+        serializer.save(**self._tenant_stamp(serializer))
 
 
 class CompanyScopedModelViewSet(CompanyScopedMixin, viewsets.ModelViewSet):

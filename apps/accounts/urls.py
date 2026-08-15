@@ -1,10 +1,13 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from apps.accounts.forms import PasswordChangeForm
 from apps.accounts.views import profile_view
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class TenantLoginView(auth_views.LoginView):
     template_name = 'accounts/login.html'
 
@@ -14,20 +17,27 @@ class TenantLoginView(auth_views.LoginView):
         return context
 
     def form_valid(self, form):
-        """Only allow users that belong to this tenant portal (or have no company yet)."""
+        """Only allow users that belong to this tenant portal."""
         from django.contrib import messages
         from apps.core.tenant import get_portal_path
 
         user = form.get_user()
         tenant = getattr(self.request, 'tenant', None)
         user_company = getattr(user, 'company', None)
-        if tenant and user_company and user_company.id != tenant.id and not user.is_superuser:
-            messages.error(
-                self.request,
-                f'This account belongs to {user_company.name}, not {tenant.name}. '
-                f'Please sign in at {get_portal_path(user_company.slug, "/accounts/login/")}.',
-            )
-            return self.form_invalid(form)
+        if tenant and not user.is_superuser:
+            if user_company is None:
+                messages.error(
+                    self.request,
+                    'This account is not linked to an organization. Ask an administrator to invite you.',
+                )
+                return self.form_invalid(form)
+            if user_company.id != tenant.id:
+                messages.error(
+                    self.request,
+                    f'This account belongs to {user_company.name}, not {tenant.name}. '
+                    f'Please sign in at {get_portal_path(user_company.slug, "/accounts/login/")}.',
+                )
+                return self.form_invalid(form)
         response = super().form_valid(form)
         # 303 prevents Turbo/browsers from re-POSTing login with a rotated CSRF token
         if getattr(response, 'status_code', None) == 302:

@@ -7,7 +7,9 @@ from apps.core.viewsets import CompanyScopedModelViewSet
 
 
 def create_serializer(model_class, read_only=None):
-    read_only = read_only or ['created_at', 'updated_at', 'created_by', 'updated_by']
+    read_only = list(read_only or ['created_at', 'updated_at', 'created_by', 'updated_by'])
+    if hasattr(model_class, 'company_id') and 'company' not in read_only:
+        read_only.append('company')
 
     class DynamicSerializer(serializers.ModelSerializer):
         class Meta:

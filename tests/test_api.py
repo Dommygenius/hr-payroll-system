@@ -4,7 +4,7 @@ from django.urls import reverse
 
 @pytest.mark.django_db
 class TestAuthentication:
-    def test_user_registration(self, api_client, company):
+    def test_user_registration_requires_auth(self, api_client, company):
         response = api_client.post('/api/v1/auth/register/', {
             'username': 'newuser',
             'email': 'newuser@test.com',
@@ -12,8 +12,24 @@ class TestAuthentication:
             'first_name': 'New',
             'last_name': 'User',
             'company': str(company.id),
+            'role': 'super_admin',
+        })
+        assert response.status_code in (401, 403)
+
+    def test_authenticated_register_stamps_company_and_ignores_role(self, authenticated_client, company, admin_user):
+        response = authenticated_client.post('/api/v1/auth/register/', {
+            'username': 'newuser',
+            'email': 'newuser@test.com',
+            'password': 'Secure@12345',
+            'first_name': 'New',
+            'last_name': 'User',
+            'role': 'super_admin',
         })
         assert response.status_code == 201
+        from django.contrib.auth import get_user_model
+        created = get_user_model().objects.get(email='newuser@test.com')
+        assert created.company_id == admin_user.company_id
+        assert created.role == 'employee'
 
     def test_jwt_token_obtain(self, api_client, admin_user):
         response = api_client.post('/api/v1/auth/token/', {

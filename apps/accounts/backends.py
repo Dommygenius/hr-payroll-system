@@ -1,12 +1,19 @@
-import secrets
-
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
 
-class EmailOrPhoneBackend(ModelBackend):
+class LockedModelBackend(ModelBackend):
+    """Django ModelBackend that honors account lockout."""
+
+    def user_can_authenticate(self, user):
+        if user is not None and getattr(user, 'is_locked', False):
+            return False
+        return super().user_can_authenticate(user)
+
+
+class EmailOrPhoneBackend(LockedModelBackend):
     """Authenticate using email or phone number."""
 
     def authenticate(self, request, username=None, password=None, **kwargs):
@@ -15,7 +22,6 @@ class EmailOrPhoneBackend(ModelBackend):
         if username is None or password is None:
             return None
 
-        user = None
         try:
             if '@' in username:
                 user = User.objects.get(email__iexact=username)
@@ -25,7 +31,7 @@ class EmailOrPhoneBackend(ModelBackend):
             User().set_password(password)
             return None
 
-        if user.is_locked:
+        if not self.user_can_authenticate(user):
             return None
 
         if user.check_password(password):
@@ -36,8 +42,8 @@ class EmailOrPhoneBackend(ModelBackend):
         return None
 
 
-class LDAPBackend(ModelBackend):
-    """LDAP/Active Directory authentication (optional)."""
+class LDAPBackend(LockedModelBackend):
+    """LDAP/Active Directory authentication (optional). Does not auto-provision users."""
 
     def authenticate(self, request, username=None, password=None, **kwargs):
         from django.conf import settings
@@ -47,14 +53,14 @@ class LDAPBackend(ModelBackend):
 
         try:
             import ldap
-            from django_auth_ldap.config import LDAPSearch
 
             conn = ldap.initialize(settings.LDAP_SERVER_URI)
             conn.simple_bind_s(settings.LDAP_BIND_DN, settings.LDAP_BIND_PASSWORD)
+            safe_username = ldap.filter.escape_filter_chars(username or '')
             result = conn.search_s(
                 settings.LDAP_USER_SEARCH_BASE,
                 ldap.SCOPE_SUBTREE,
-                f'(sAMAccountName={username})',
+                f'(sAMAccountName={safe_username})',
             )
             if not result:
                 return None
@@ -62,20 +68,13 @@ class LDAPBackend(ModelBackend):
             user_dn = result[0][0]
             conn.simple_bind_s(user_dn, password)
 
-            company = getattr(request, 'tenant', None) if request is not None else None
             try:
                 user = User.objects.get(username=username)
-                if company and not user.company_id:
-                    user.company = company
-                    user.save(update_fields=['company'])
-                return user
             except User.DoesNotExist:
-                return User.objects.create_user(
-                    username=username,
-                    email=f'{username}@ldap.local',
-                    password=secrets.token_urlsafe(32),
-                    company=company,
-                )
+                return None
+            if not self.user_can_authenticate(user):
+                return None
+            return user
         except ImportError:
             return None
         except Exception:

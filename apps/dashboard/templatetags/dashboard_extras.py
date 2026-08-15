@@ -1,4 +1,5 @@
 from django import template
+from django.utils.html import format_html
 
 register = template.Library()
 
@@ -21,7 +22,7 @@ def status_badge(value):
     key = text.lower().replace(' ', '_')
     css = STATUS_MAP.get(key, 'default')
     display = text.replace('_', ' ')
-    return f'<span class="status-badge status-{css}">{display}</span>'
+    return format_html('<span class="status-badge status-{}">{}</span>', css, display)
 
 
 @register.filter

@@ -18,9 +18,11 @@
         </div>
         <div class="page-actions d-flex gap-2">
             <a href="{% tenant_url 'module-tab' module=module tab=active_tab %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+            {% if can_write %}
             <a href="{% tenant_url 'module-create' module=module tab=active_tab %}" class="btn btn-primary">
                 <i class="bi bi-plus-lg"></i> Add New
             </a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -175,11 +177,15 @@
                     {% endfor %}
                     <td>
                         <div class="table-actions">
+                            {% if can_write %}
                             <a href="{% tenant_url 'module-edit' module=module tab=active_tab pk=row.id %}" class="btn-icon" title="Edit"><i class="bi bi-pencil"></i></a>
                             <form method="post" action="{% tenant_url 'module-delete' module=module tab=active_tab pk=row.id %}" class="d-inline" onsubmit="return confirm('Delete this record permanently?');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn-icon btn-icon-danger" title="Delete"><i class="bi bi-trash"></i></button>
                             </form>
+                            {% else %}
+                            <span class="text-muted small">View only</span>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -190,9 +196,11 @@
                             <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
                             <h6>No records yet</h6>
                             <p>Get started by adding your first entry.</p>
+                            {% if can_write %}
                             <a href="{% tenant_url 'module-create' module=module tab=active_tab %}" class="btn btn-primary btn-sm">
                                 <i class="bi bi-plus-lg"></i> Add {{ tab_cfg.label|slice:":-1" }}
                             </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

@@ -628,8 +628,12 @@ class UserAccountForm(CompanyModelForm):
         if pw or pw2:
             if pw != pw2:
                 raise forms.ValidationError('Passwords do not match.')
-            if len(pw) < 8:
-                raise forms.ValidationError('Password must be at least 8 characters.')
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            try:
+                validate_password(pw, user=self.instance)
+            except DjangoValidationError as exc:
+                raise forms.ValidationError(exc.messages)
         return cleaned
 
     def save(self, commit=True):

@@ -22,6 +22,11 @@ from apps.core.http import tenant_redirect
 MODULE_PAGE_SIZE = 50
 
 
+def dumps_for_html(data):
+    """JSON safe to embed in a <script> tag."""
+    return json.dumps(data, default=str).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+
+
 @login_required
 def index(request):
     """Main HR dashboard."""
@@ -113,7 +118,7 @@ def index(request):
 
     context = {
         'stats': stats,
-        'dept_breakdown_json': json.dumps(dept_breakdown),
+        'dept_breakdown_json': dumps_for_html(dept_breakdown),
         'dept_breakdown': dept_breakdown,
         'announcements': announcements,
         'recent_employees': employee_qs.select_related('department', 'designation').order_by('-created_at')[:5],
@@ -143,7 +148,7 @@ def module_view(request, module, tab=None):
     if module == 'settings' and tab_cfg.get('key') == 'roles':
         return roles_catalog_view(request)
 
-    from apps.accounts.permissions import can_manage_users
+    from apps.accounts.permissions import can_manage_users, can_write_module
     from django.core.exceptions import PermissionDenied
 
     if module == 'settings' and tab_cfg.get('key') == 'users' and not can_manage_users(request.user):
@@ -189,13 +194,14 @@ def module_view(request, module, tab=None):
         'tabs': mod['tabs'],
         'title': mod['title'],
         'rows': rows,
-        'rows_json': json.dumps(rows, default=str),
+        'rows_json': dumps_for_html(rows),
         'columns': tab_cfg.get('columns', []),
         'detail_fields': detail_fields,
         'search': search,
         'stats': stats,
         'total_count': total_count,
         'page_size': page_size,
+        'can_write': can_write_module(request.user, module, tab_cfg.get('key')),
     }
     return render(request, 'modules/crud.html', context)
 
@@ -255,8 +261,7 @@ def _module_stats(user, module, company=None):
         if module == 'employees':
             from apps.employees.models import Employee
             qs = Employee.objects.filter(is_deleted=False)
-            if company:
-                qs = qs.filter(company=company)
+            qs = qs.filter(company=company) if company else qs.none()
             stats = [
                 {'label': 'Total', 'value': qs.count(), 'color': 'primary'},
                 {'label': 'Active', 'value': qs.filter(employment_status='active').count(), 'color': 'success'},
@@ -265,8 +270,7 @@ def _module_stats(user, module, company=None):
         elif module == 'leave':
             from apps.leave.models import LeaveRequest
             qs = LeaveRequest.objects.all()
-            if company:
-                qs = qs.filter(company=company)
+            qs = qs.filter(company=company) if company else qs.none()
             stats = [
                 {'label': 'Pending', 'value': qs.filter(status='pending').count(), 'color': 'warning'},
                 {'label': 'Approved', 'value': qs.filter(status='approved').count(), 'color': 'success'},
@@ -279,6 +283,9 @@ def _module_stats(user, module, company=None):
             if company:
                 run_qs = run_qs.filter(company=company)
                 slip_qs = slip_qs.filter(company=company)
+            else:
+                run_qs = run_qs.none()
+                slip_qs = slip_qs.none()
             stats = [
                 {'label': 'Payroll Runs', 'value': run_qs.count(), 'color': 'primary'},
                 {'label': 'Draft/Review', 'value': run_qs.filter(status__in=['draft', 'review']).count(), 'color': 'warning'},
@@ -291,6 +298,9 @@ def _module_stats(user, module, company=None):
             if company:
                 jobs = jobs.filter(company=company)
                 apps_qs = apps_qs.filter(company=company)
+            else:
+                jobs = jobs.none()
+                apps_qs = apps_qs.none()
             stats = [
                 {'label': 'Open Jobs', 'value': jobs.filter(status='open').count(), 'color': 'primary'},
                 {'label': 'New Applicants', 'value': apps_qs.filter(status='new').count(), 'color': 'info'},
@@ -391,7 +401,7 @@ def clock_in_view(request):
 def module_create(request, module, tab):
     from django.core.exceptions import PermissionDenied
 
-    from apps.accounts.permissions import can_manage_users
+    from apps.accounts.permissions import can_manage_users, can_write_module
     from apps.dashboard.forms import UserAccountForm
 
     mod = get_module(module)
@@ -401,6 +411,8 @@ def module_create(request, module, tab):
 
     if module == 'settings' and tab == 'users' and not can_manage_users(request.user):
         raise PermissionDenied('Only Super Admin / HR Admin can manage users.')
+    if not can_write_module(request.user, module, tab, action='create'):
+        raise PermissionDenied('You do not have permission to create records in this module.')
 
     company = get_request_company(request)
     form_class = tab_cfg['form']
@@ -455,7 +467,7 @@ def _leave_approval_context(module, tab, obj):
 def module_edit(request, module, tab, pk):
     from django.core.exceptions import PermissionDenied
 
-    from apps.accounts.permissions import can_manage_users
+    from apps.accounts.permissions import can_manage_leave, can_manage_users, can_write_module
     from apps.dashboard.forms import UserAccountForm
 
     mod = get_module(module)
@@ -465,6 +477,8 @@ def module_edit(request, module, tab, pk):
 
     if module == 'settings' and tab == 'users' and not can_manage_users(request.user):
         raise PermissionDenied('Only Super Admin / HR Admin can manage users.')
+    if not can_write_module(request.user, module, tab, action='write'):
+        raise PermissionDenied('You do not have permission to edit records in this module.')
 
     company = get_request_company(request)
     qs = scoped_queryset(request.user, tab_cfg['model'], company=company)
@@ -479,6 +493,9 @@ def module_edit(request, module, tab, pk):
         approve_action = post_data.get('approve_action')
         if module == 'leave' and tab == 'requests' and approve_action in ('approve', 'reject'):
             from apps.leave.models import LeaveRequest
+
+            if not can_manage_leave(request.user):
+                raise PermissionDenied('Only managers and HR can approve or reject leave.')
 
             post_data['status'] = (
                 LeaveRequest.Status.APPROVED if approve_action == 'approve' else LeaveRequest.Status.REJECTED
@@ -516,7 +533,7 @@ def module_edit(request, module, tab, pk):
 def module_delete(request, module, tab, pk):
     from django.core.exceptions import PermissionDenied
 
-    from apps.accounts.permissions import can_manage_users
+    from apps.accounts.permissions import can_manage_users, can_write_module
 
     mod = get_module(module)
     tab_cfg = get_tab(module, tab)
@@ -525,6 +542,8 @@ def module_delete(request, module, tab, pk):
 
     if module == 'settings' and tab == 'users' and not can_manage_users(request.user):
         raise PermissionDenied('Only Super Admin / HR Admin can manage users.')
+    if not can_write_module(request.user, module, tab, action='delete'):
+        raise PermissionDenied('You do not have permission to delete records in this module.')
 
     qs = scoped_queryset(request.user, tab_cfg['model'], company=get_request_company(request))
     obj = get_object_or_404(qs, pk=pk)
@@ -550,7 +569,9 @@ def reports_view(request):
     today = timezone.now().date()
 
     def _filter(qs):
-        return qs.filter(company=company) if company else qs
+        if not company:
+            return qs.none()
+        return qs.filter(company=company)
 
     emp = _filter(Employee.objects.filter(is_deleted=False))
     context = {
@@ -569,8 +590,8 @@ def reports_view(request):
         'dept_data': list(emp.values('department__name').annotate(count=Count('id')).order_by('-count')[:8]),
         'leave_by_status': list(_filter(LeaveRequest.objects.all()).values('status').annotate(count=Count('id'))),
     }
-    context['dept_data_json'] = json.dumps(context['dept_data'])
-    context['leave_data_json'] = json.dumps(context['leave_by_status'])
+    context['dept_data_json'] = dumps_for_html(context['dept_data'])
+    context['leave_data_json'] = dumps_for_html(context['leave_by_status'])
     return render(request, 'modules/reports.html', context)
 
 
@@ -615,6 +636,8 @@ def ai_view(request):
     jobs_qs = AIAnalysisJob.objects.all()
     if company:
         jobs_qs = jobs_qs.filter(company=company)
+    else:
+        jobs_qs = jobs_qs.none()
 
     conv = ChatbotConversation.objects.filter(user=request.user, is_active=True).first()
     chat_history = []

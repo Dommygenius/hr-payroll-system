@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -16,6 +17,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
 DEBUG = env('DEBUG')
+if not DEBUG and str(SECRET_KEY).startswith('django-insecure-'):
+    raise ImproperlyConfigured('Set a strong SECRET_KEY when DEBUG is False.')
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
 INSTALLED_APPS = [
@@ -194,6 +197,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated'],
 }
 
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
@@ -237,9 +241,9 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@hrms.local')
 
 # django-allauth
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
+    'apps.accounts.backends.LockedModelBackend',
     'apps.accounts.backends.EmailOrPhoneBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
     'apps.accounts.backends.LDAPBackend',
 ]
 
@@ -280,7 +284,7 @@ if _GH_CID and _GH_SECRET:
         'SCOPE': ['user:email'],
     }
 
-SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_AUTO_SIGNUP = False
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_LOGIN_ON_GET = False
 HRMS_OAUTH_ENABLED = {
@@ -299,7 +303,19 @@ SESSION_SAVE_EVERY_REQUEST = True
 # Behind host nginx / TLS terminator
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+_csrf_trusted = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+if not _csrf_trusted and DEBUG:
+    _csrf_trusted = [
+        'http://127.0.0.1:8000',
+        'http://localhost:8000',
+        'http://127.0.0.1:8001',
+        'http://localhost:8001',
+    ]
+CSRF_TRUSTED_ORIGINS = _csrf_trusted
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)

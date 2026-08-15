@@ -23,7 +23,7 @@ User = get_user_model()
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserCreateSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):
@@ -98,6 +98,9 @@ class MFASetupView(APIView):
         )
         if created:
             device.save()
+
+        if device.confirmed:
+            return Response({'detail': 'MFA is already enabled for this account.'})
 
         uri = device.config_url
         qr = qrcode.make(uri)

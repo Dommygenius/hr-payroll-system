@@ -77,7 +77,10 @@ class TenantMiddleware:
             and request.path not in self.PUBLIC_PATHS
         ):
             user_company = getattr(request.user, 'company', None)
-            if user_company and user_company.id != request.tenant.id:
+            if user_company is None:
+                from django.core.exceptions import PermissionDenied
+                raise PermissionDenied('No organization is linked to this account.')
+            if user_company.id != request.tenant.id:
                 from apps.core.tenant import get_portal_path
                 return redirect(get_portal_path(user_company.slug, '/dashboard/'))
 

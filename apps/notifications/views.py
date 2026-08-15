@@ -27,8 +27,10 @@ class NotificationViewSet(CompanyScopedModelViewSet):
     filterset_fields = ['recipient', 'channel', 'priority', 'is_read']
 
     def get_queryset(self):
-        # Owner-scoped; always limited to the current user
         return Notification.objects.filter(recipient=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(recipient=self.request.user)
 
 
 class AnnouncementViewSet(CompanyScopedModelViewSet):

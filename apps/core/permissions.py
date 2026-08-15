@@ -5,7 +5,12 @@ class IsCompanyMember(permissions.BasePermission):
     """User must belong to the same company as the object."""
 
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated)
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_superuser:
+            return True
+        return bool(getattr(user, 'company_id', None))
 
     def has_object_permission(self, request, view, obj):
         if not request.user.is_authenticated:

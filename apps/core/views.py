@@ -9,10 +9,10 @@ from apps.core.serializers import (
     DesignationSerializer,
     HolidaySerializer,
 )
-from apps.core.viewsets import CompanyScopedModelViewSet
+from apps.core.viewsets import CompanyScopedModelViewSet, CompanyScopedReadOnlyModelViewSet
 
 
-class CompanyViewSet(CompanyScopedModelViewSet):
+class CompanyViewSet(CompanyScopedReadOnlyModelViewSet):
     queryset = Company.objects.filter(is_active=True)
     serializer_class = CompanySerializer
     permission_classes = [IsAuthenticated, IsCompanyMember]

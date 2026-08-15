@@ -22,17 +22,21 @@ def resolve_oauth_company(request):
 
 
 class HrmsAccountAdapter(DefaultAccountAdapter):
+    def is_open_for_signup(self, request):
+        # Organizations sign up via /register/; users are invited by Super Admin / HR.
+        return False
+
     def save_user(self, request, user, form, commit=True):
         user = super().save_user(request, user, form, commit=False)
-        company = resolve_oauth_company(request)
-        if company and not user.company_id:
-            user.company = company
         if commit:
             user.save()
         return user
 
 
 class HrmsSocialAccountAdapter(DefaultSocialAccountAdapter):
+    def is_open_for_signup(self, request, sociallogin):
+        return False
+
     def pre_social_login(self, request, sociallogin):
         company = resolve_oauth_company(request)
         if not company:
@@ -49,18 +53,10 @@ class HrmsSocialAccountAdapter(DefaultSocialAccountAdapter):
                 if company.slug:
                     login_path = f'/t/{company.slug}/accounts/login/'
                 raise ImmediateHttpResponse(redirect(login_path))
-
-    def populate_user(self, request, sociallogin, data):
-        user = super().populate_user(request, sociallogin, data)
-        company = resolve_oauth_company(request)
-        if company and not getattr(user, 'company_id', None):
-            user.company = company
-        return user
-
-    def save_user(self, request, sociallogin, form=None):
-        user = super().save_user(request, sociallogin, form=form)
-        company = resolve_oauth_company(request)
-        if company and not user.company_id:
-            user.company = company
-            user.save(update_fields=['company'])
-        return user
+            if not existing.company_id:
+                messages.error(
+                    request,
+                    'This account is not linked to an organization. Ask an administrator to invite you.',
+                )
+                login_path = f'/t/{company.slug}/accounts/login/' if company.slug else '/accounts/login/'
+                raise ImmediateHttpResponse(redirect(login_path))
